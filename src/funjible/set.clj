@@ -32,10 +32,12 @@ if any argument s has (set? s) false."
        (reduce into (first bubbled-sets) (rest bubbled-sets)))))
 
 (defn intersection
-  "Return a set that is the intersection of the input sets"
+  "Return a set that is the intersection of the input sets.  Throws
+exception if any argument s has (set? s) false."
   {:added "1.0"}
-  ([s1] s1)
+  ([s1] {:pre [(set? s1)]} s1)
   ([s1 s2]
+     {:pre [(and (set? s1) (set? s2))]}
      (if (< (count s2) (count s1))
        (recur s2 s1)
        (reduce (fn [result item]
