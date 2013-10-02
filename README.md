@@ -6,9 +6,26 @@ documentation.
 
 * funjible.set is like clojure.set
 
+
 ## Usage
 
-TBD
+TBD: Add Leiningen dependency line to add, after I know what that will
+be.
+
+TBD: Add examples in doc strings.
+
+TBD: Add tests that verify these functions work with Michal's new
+ordered set implementations?
+
+TBD: List other set implementations that should work with these
+functions (as well as clojure.set's).
+
+* Zach Tellman's immutable bitsets use less memory when you only want
+  sets of integers, especially if those integers have values close
+  together.  https://github.com/ztellman/immutable-bitset
+
+* TBD: Michale Marczyk's ordered sets.
+
 
 ## Performance notes
 
@@ -23,6 +40,7 @@ performance, but maybe not so good for code clarity.
 
 If transients are used, remember to preserve metadata, preferably in
 the same way that clojure.set does.
+
 
 ## License
 
