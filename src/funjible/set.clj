@@ -17,7 +17,8 @@
     (cons max (remove #(identical? max %) coll))))
 
 (defn union
-  "Return a set that is the union of the input sets"
+  "Return a set that is the union of the input sets.  Throws exception
+if any argument s has (set? s) false."
   {:added "1.0"}
   ([] #{})
   ([s1] {:pre [(set? s1)]} s1)
