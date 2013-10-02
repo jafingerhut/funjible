@@ -46,10 +46,13 @@
        (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
 
 (defn difference
-  "Return a set that is the first set without elements of the remaining sets"
+  "Return a set that is the first set without elements of the
+remaining sets.  Throws exception if any argument s has (set? s)
+false."
   {:added "1.0"}
-  ([s1] s1)
+  ([s1] {:pre [(set? s1)]} s1)
   ([s1 s2] 
+     {:pre [(and (set? s1) (set? s2))]}
      (if (< (count s1) (count s2))
        (reduce (fn [result item] 
                    (if (contains? s2 item) 
