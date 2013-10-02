@@ -12,7 +12,17 @@ TBD
 
 ## Performance notes
 
-TBD
+TBD: Measure performance overhead for :pre preconditions as the only
+change.
+
+TBD: Later investigate whether use of transients would speed things up
+in functions like union, intersection, difference, select, etc.  If
+there was a code path that never created a transient object if the
+return value was unchanged from input value, that might be good for
+performance, but maybe not so good for code clarity.
+
+If transients are used, remember to preserve metadata, preferably in
+the same way that clojure.set does.
 
 ## License
 
