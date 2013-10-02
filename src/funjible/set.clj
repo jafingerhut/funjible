@@ -69,9 +69,11 @@ false."
 
 
 (defn select
-  "Returns a set of the elements for which pred is true"
+  "Returns a set of the elements for which pred is true.  Throws
+exception if (set? xset) is false."
   {:added "1.0"}
   [pred xset]
+    {:pre [(set? xset)]}
     (reduce (fn [s k] (if (pred k) s (disj s k)))
             xset xset))
 
