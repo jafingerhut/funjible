@@ -4,7 +4,9 @@ A Clojure library designed to be nearly identical to some core Clojure
 libraries, but with more extensive error-checking and/or
 documentation.
 
-* funjible.set is like clojure.set
+* `funjible.set` is functionally identical to `clojure.set`, except
+  its functions throw exceptions if you give them arguments of the
+  wrong type.
 
 
 ## Usage
@@ -12,19 +14,18 @@ documentation.
 TBD: Add Leiningen dependency line to add, after I know what that will
 be.
 
-TBD: Add examples in doc strings.
+Other Clojure set implementations:
 
-TBD: Add tests that verify these functions work with Michal's new
-ordered set implementations?
+* Zach Tellman's [immutable
+  bitsets](https://github.com/ztellman/immutable-bitset) use less
+  memory when you only want sets of integers, especially if those
+  integers have values close together.
 
-TBD: List other set implementations that should work with these
-functions (as well as clojure.set's).
-
-* Zach Tellman's immutable bitsets use less memory when you only want
-  sets of integers, especially if those integers have values close
-  together.  https://github.com/ztellman/immutable-bitset
-
-* TBD: Michale Marczyk's ordered sets.
+* Michał Marczyk's [sorted sets and maps using AVL
+  trees](https://github.com/michalmarczyk/avl.clj) can efficiently
+  find the rank of elements/keys, and they have transient
+  implementations for them, unlike `clojure.core`'s sorted sets and
+  maps.
 
 
 ## Performance notes
@@ -32,14 +33,16 @@ functions (as well as clojure.set's).
 TBD: Measure performance overhead for :pre preconditions as the only
 change.
 
-TBD: Later investigate whether use of transients would speed things up
-in functions like union, intersection, difference, select, etc.  If
-there was a code path that never created a transient object if the
-return value was unchanged from input value, that might be good for
-performance, but maybe not so good for code clarity.
+TBD: Investigate whether use of transients would speed things up in
+functions like union, intersection, difference, select, etc.
 
-If transients are used, remember to preserve metadata, preferably in
-the same way that clojure.set does.
+It might help speed things up if there were paths through the
+functions that never create a transient object if the return value is
+unchanged from input value.  However, it maybe not so good for code
+clarity.
+
+If transients are used, remember to preserve metadata in the return
+values, in the same way that clojure.set does.
 
 
 ## License
