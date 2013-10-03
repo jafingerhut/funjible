@@ -18,7 +18,11 @@
 
 (defn union
   "Return a set that is the union of the input sets.  Throws exception
-if any argument s has (set? s) false."
+if any argument s has (set? s) false.
+
+Example:
+user=> (union #{1 :a \"b\"} #{-82 \"b\" {:foo 7} :a})
+#{1 \"b\" {:foo 7} :a -82}"
   {:added "1.0"}
   ([] #{})
   ([s1] {:pre [(set? s1)]} s1)
@@ -33,7 +37,11 @@ if any argument s has (set? s) false."
 
 (defn intersection
   "Return a set that is the intersection of the input sets.  Throws
-exception if any argument s has (set? s) false."
+exception if any argument s has (set? s) false.
+
+Example:
+user=> (intersection #{#{5 8/3} \"bar\" :k1} #{\"goo\" #{8/3 5} -7 :k1})
+#{#{5 8/3} :k1}"
   {:added "1.0"}
   ([s1] {:pre [(set? s1)]} s1)
   ([s1 s2]
@@ -52,7 +60,11 @@ exception if any argument s has (set? s) false."
 (defn difference
   "Return a set that is the first set without elements of the
 remaining sets.  Throws exception if any argument s has (set? s)
-false."
+false.
+
+Example:
+user=> (difference #{2 4 6 8 10 12} #{3 6 9 12})
+#{2 4 8 10}"
   {:added "1.0"}
   ([s1] {:pre [(set? s1)]} s1)
   ([s1 s2] 
@@ -70,7 +82,11 @@ false."
 
 (defn select
   "Returns a set of the elements for which pred is true.  Throws
-exception if (set? xset) is false."
+exception if (set? xset) is false.
+
+Example:
+user=> (select even? #{3 6 9 12 15 18})
+#{6 12 18}"
   {:added "1.0"}
   [pred xset]
     {:pre [(set? xset)]}
@@ -78,15 +94,36 @@ exception if (set? xset) is false."
             xset xset))
 
 (defn project
-  "Returns a rel of the elements of xrel with only the keys in ks"
+  "Takes a relation (a set of maps) xrel, and returns a relation
+where every map contains only the keys in ks.  Throws exception
+if (set? xrel) is false.
+
+Example:
+user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
+                  {:name \"Musical Offering\" :composer \"J. S. Bach\"}
+                  {:name \"Requiem\" :composer \"W. A. Mozart\"}})
+#'user/rel
+user=> (project rel [:composer])
+#{{:composer \"W. A. Mozart\"} {:composer \"J. S. Bach\"}}"
   {:added "1.0"}
   [xrel ks]
+  {:pre [(set? xrel)]}
   (with-meta (set (map #(select-keys % ks) xrel)) (meta xrel)))
 
 (defn rename-keys
-  "Returns the map with the keys in kmap renamed to the vals in kmap"
+  "Returns the map with the keys in kmap renamed to the vals in kmap.
+Throws exception if any argument m has (map? m) false.
+
+Example:
+user=> (rename-keys {:a 1 :b 2 :c 3} {:a :apple :b :bop})
+{:bop 2, :apple 1, :c 3}
+
+;; It handles cases like this correctly, too.
+user=> (rename-keys {:a 1, :b 2, :c 3} {:a :b, :b :a})
+{:a 2, :b 1, :c 3}"
   {:added "1.0"}
   [map kmap]
+    {:pre [(and (map? map) (map? kmap))]}
     (reduce 
      (fn [m [old new]]
        (if (contains? map old)
@@ -95,9 +132,22 @@ exception if (set? xset) is false."
      (apply dissoc map (keys kmap)) kmap))
 
 (defn rename
-  "Returns a rel of the maps in xrel with the keys in kmap renamed to the vals in kmap"
+  "Takes a relation (a set of maps) xrel, and returns a relation where
+all keys in kmap have been renamed to the corresponding vals in kmap.
+Throws exception if (set? xrel) is false or (map? kmap) is false.
+
+Example:
+user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
+                  {:name \"Musical Offering\" :composer \"J. S. Bach\"}
+                  {:name \"Requiem\" :composer \"W. A. Mozart\"}})
+#'user/rel
+user=> (rename rel {:name :title})
+#{{:title \"Art of the Fugue\", :composer \"J. S. Bach\"}
+  {:title \"Musical Offering\", :composer \"J. S. Bach\"}
+  {:title \"Requiem\", :composer \"W. A. Mozart\"}}"
   {:added "1.0"}
   [xrel kmap]
+  {:pre [(and (set? xrel) (map? kmap))]}
   (with-meta (set (map #(rename-keys % kmap) xrel)) (meta xrel)))
 
 (defn index
@@ -149,7 +199,10 @@ exception if (set? xset) is false."
 
 (defn subset? 
   "Is set1 a subset of set2?  Throws exception if any argument s
-has (set? s) false."
+has (set? s) false.
+
+Example:
+TBD"
   {:added "1.2",
    :tag Boolean}
   [set1 set2]
@@ -159,7 +212,10 @@ has (set? s) false."
 
 (defn superset? 
   "Is set1 a superset of set2?  Throws exception if any argument s
-has (set? s) false."
+has (set? s) false.
+
+Example:
+TBD"
   {:added "1.2",
    :tag Boolean}
   [set1 set2]

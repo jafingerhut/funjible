@@ -18,4 +18,10 @@
   (is (thrown? AssertionError (f/subset? #{1 2 3} '(1 2))))
   (is (thrown? AssertionError (f/superset? #{1 2 3} '(1 2))))
 
+  (is (thrown? AssertionError (f/project [{:a 1 :b 2} {:a 3 :b 4}] [:a])))
+
+  (is (thrown? AssertionError (f/rename-keys {:a 1 :b 2} [[:a 3] [:b 4]])))
+
+  (is (thrown? AssertionError (f/rename {:a 1 :b 2} {:a 3, :b 4})))
+  (is (thrown? AssertionError (f/rename #{{:a 1 :b 2}} [[:a 3] [:b 4]])))
   )
