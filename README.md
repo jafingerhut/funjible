@@ -81,7 +81,7 @@ functions like union, intersection, difference, select, etc.
 
 It might help speed things up if there were paths through the
 functions that never create a transient object if the return value is
-unchanged from input value.  However, it maybe not so good for code
+unchanged from input value.  However, it may be not so good for code
 clarity.
 
 If transients are used, remember to preserve metadata in the return
