@@ -18,16 +18,16 @@
 
 (defn union
   "Return a set that is the union of the input sets.  Throws exception
-if any argument s has (set? s) false.
+  if any argument is not a set.
 
-Example:
-user=> (union #{1 :a \"b\"} #{-82 \"b\" {:foo 7} :a})
-#{1 \"b\" {:foo 7} :a -82}"
+  Example:
+  user=> (union #{1 :a \"b\"} #{:a \"b\" -82 {:foo 7}})
+  #{1 :a \"b\" {:foo 7} -82}"
   {:added "1.0"}
   ([] #{})
   ([s1] {:pre [(set? s1)]} s1)
   ([s1 s2]
-     {:pre [(and (set? s1) (set? s2))]}
+     {:pre [(set? s1) (set? s2)]}
      (if (< (count s1) (count s2))
        (reduce conj s2 s1)
        (reduce conj s1 s2)))
@@ -37,15 +37,15 @@ user=> (union #{1 :a \"b\"} #{-82 \"b\" {:foo 7} :a})
 
 (defn intersection
   "Return a set that is the intersection of the input sets.  Throws
-exception if any argument s has (set? s) false.
+  exception if any argument is not a set.
 
-Example:
-user=> (intersection #{#{5 8/3} \"bar\" :k1} #{\"goo\" #{8/3 5} -7 :k1})
-#{#{5 8/3} :k1}"
+  Example:
+  user=> (intersection #{:k1 #{8/3 5} \"bar\"} #{:k1 \"goo\" #{8/3 5}})
+  #{#{5 8/3} :k1}"
   {:added "1.0"}
   ([s1] {:pre [(set? s1)]} s1)
   ([s1 s2]
-     {:pre [(and (set? s1) (set? s2))]}
+     {:pre [(set? s1) (set? s2)]}
      (if (< (count s2) (count s1))
        (recur s2 s1)
        (reduce (fn [result item]
@@ -59,16 +59,15 @@ user=> (intersection #{#{5 8/3} \"bar\" :k1} #{\"goo\" #{8/3 5} -7 :k1})
 
 (defn difference
   "Return a set that is the first set without elements of the
-remaining sets.  Throws exception if any argument s has (set? s)
-false.
+  remaining sets.  Throws exception if any argument is not a set.
 
-Example:
-user=> (difference #{2 4 6 8 10 12} #{3 6 9 12})
-#{2 4 8 10}"
+  Example:
+  user=> (difference #{2 4 6 8 10 12} #{3 6 9 12})
+  #{2 4 8 10}"
   {:added "1.0"}
   ([s1] {:pre [(set? s1)]} s1)
   ([s1 s2] 
-     {:pre [(and (set? s1) (set? s2))]}
+     {:pre [(set? s1) (set? s2)]}
      (if (< (count s1) (count s2))
        (reduce (fn [result item] 
                    (if (contains? s2 item) 
@@ -82,11 +81,11 @@ user=> (difference #{2 4 6 8 10 12} #{3 6 9 12})
 
 (defn select
   "Returns a set of the elements for which pred is true.  Throws
-exception if (set? xset) is false.
+  exception if xset is not a set.
 
-Example:
-user=> (select even? #{3 6 9 12 15 18})
-#{6 12 18}"
+  Example:
+  user=> (select even? #{3 6 9 12 15 18})
+  #{6 12 18}"
   {:added "1.0"}
   [pred xset]
     {:pre [(set? xset)]}
@@ -95,16 +94,17 @@ user=> (select even? #{3 6 9 12 15 18})
 
 (defn project
   "Takes a relation (a set of maps) xrel, and returns a relation
-where every map contains only the keys in ks.  Throws exception
-if (set? xrel) is false.
+  where every map contains only the keys in ks.  Throws exception
+  if xrel is not a set.
 
-Example:
-user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
-                  {:name \"Musical Offering\" :composer \"J. S. Bach\"}
-                  {:name \"Requiem\" :composer \"W. A. Mozart\"}})
-#'user/rel
-user=> (project rel [:composer])
-#{{:composer \"W. A. Mozart\"} {:composer \"J. S. Bach\"}}"
+  Example:
+  user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
+                    {:name \"Musical Offering\" :composer \"J. S. Bach\"}
+                    {:name \"Requiem\" :composer \"W. A. Mozart\"}})
+  #'user/rel
+  user=> (project rel [:composer])
+  #{{:composer \"W. A. Mozart\"}
+    {:composer \"J. S. Bach\"}}"
   {:added "1.0"}
   [xrel ks]
   {:pre [(set? xrel)]}
@@ -112,18 +112,18 @@ user=> (project rel [:composer])
 
 (defn rename-keys
   "Returns the map with the keys in kmap renamed to the vals in kmap.
-Throws exception if any argument m has (map? m) false.
+  Throws exception if any argument is not a map.
 
-Example:
-user=> (rename-keys {:a 1 :b 2 :c 3} {:a :apple :b :bop})
-{:bop 2, :apple 1, :c 3}
+  Examples:
+  user=> (rename-keys {:a 1 :b 2 :c 3} {:a :apple :b :bop})
+  {:bop 2, :apple 1, :c 3}
 
-;; It handles cases like this correctly, too.
-user=> (rename-keys {:a 1, :b 2, :c 3} {:a :b, :b :a})
-{:a 2, :b 1, :c 3}"
+  ;; It handles cases like this correctly, too.
+  user=> (rename-keys {:a 1, :b 2, :c 3} {:a :b, :b :a})
+  {:a 2, :b 1, :c 3}"
   {:added "1.0"}
   [map kmap]
-    {:pre [(and (map? map) (map? kmap))]}
+    {:pre [(map? map) (map? kmap)]}
     (reduce 
      (fn [m [old new]]
        (if (contains? map old)
@@ -133,45 +133,76 @@ user=> (rename-keys {:a 1, :b 2, :c 3} {:a :b, :b :a})
 
 (defn rename
   "Takes a relation (a set of maps) xrel, and returns a relation where
-all keys in kmap have been renamed to the corresponding vals in kmap.
-Throws exception if (set? xrel) is false or (map? kmap) is false.
+  all keys in kmap have been renamed to the corresponding vals in
+  kmap.  Throws exception if xrel is not a set or kmap is not a map.
 
-Example:
-user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
-                  {:name \"Musical Offering\" :composer \"J. S. Bach\"}
-                  {:name \"Requiem\" :composer \"W. A. Mozart\"}})
-#'user/rel
-user=> (rename rel {:name :title})
-#{{:title \"Art of the Fugue\", :composer \"J. S. Bach\"}
-  {:title \"Musical Offering\", :composer \"J. S. Bach\"}
-  {:title \"Requiem\", :composer \"W. A. Mozart\"}}"
+  Example:
+  user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
+                    {:name \"Musical Offering\" :composer \"J. S. Bach\"}
+                    {:name \"Requiem\" :composer \"W. A. Mozart\"}})
+  #'user/rel
+  user=> (rename rel {:name :title})
+  #{{:title \"Art of the Fugue\", :composer \"J. S. Bach\"}
+    {:title \"Musical Offering\", :composer \"J. S. Bach\"}
+    {:title \"Requiem\", :composer \"W. A. Mozart\"}}"
   {:added "1.0"}
   [xrel kmap]
-  {:pre [(and (set? xrel) (map? kmap))]}
+  {:pre [(set? xrel) (map? kmap)]}
   (with-meta (set (map #(rename-keys % kmap) xrel)) (meta xrel)))
 
 (defn index
-  "Returns a map of the distinct values of ks in the xrel mapped to a
-  set of the maps in xrel with the corresponding values of ks."
+  "Given a relation (a set of maps) xrel, return a map.  The keys are
+  themselves maps of the distinct values of ks in xrel.  Each is
+  mapped to the subset of xrel that has the corresponding values of
+  ks.  Throws exception if xrel is not a set.
+
+  user=> (def people #{{:name \"Lakshmi\", :age 8}
+                       {:name \"Hans\", :age 9}
+                       {:name \"Rahul\", :age 10}
+                       {:name \"George\", :age 8}
+                       {:name \"Paula\", :age 10}})
+  #'user/people
+  user=> (index people [:age])
+  {{:age 8} #{{:age 8, :name \"Lakshmi\"}
+              {:age 8, :name \"George\"}},
+   {:age 10} #{{:age 10, :name \"Rahul\"}
+               {:age 10, :name \"Paula\"}},
+   {:age 9} #{{:age 9, :name \"Hans\"}}}"
   {:added "1.0"}
   [xrel ks]
+    {:pre [(set? xrel)]}
     (reduce
      (fn [m x]
        (let [ik (select-keys x ks)]
          (assoc m ik (conj (get m ik #{}) x))))
      {} xrel))
-   
+
+;; TBD: Consider changing map-invert return value to have metadata of
+;; the arg m.
 (defn map-invert
-  "Returns the map with the vals mapped to the keys."
+  "Returns the map with the vals mapped to the keys.  If a val appears
+  more than once in the map, only one of its keys will appear in the
+  result.  Do not rely on which one.  Throws exception if m is not a
+  map.
+
+  Examples:
+  user=> (map-invert {:a 1, :b 2})
+  {2 :b, 1 :a}
+  user=> (map-invert {:a 1, :b 1})
+  {1 :b}"
   {:added "1.0"}
-  [m] (reduce (fn [m [k v]] (assoc m v k)) {} m))
+  [m]
+  {:pre [(map? m)]}
+  (reduce (fn [m [k v]] (assoc m v k)) {} m))
 
 (defn join
-  "When passed 2 rels, returns the rel corresponding to the natural
-  join. When passed an additional keymap, joins on the corresponding
-  keys."
+  "When passed 2 relations (sets of maps), returns the relation
+  corresponding to the natural join.  When passed an additional
+  keymap, joins on the corresponding keys.  Throws exception if xrel
+  or yrel are not sets, or if km is not a map."
   {:added "1.0"}
   ([xrel yrel] ;natural join
+   {:pre [(set? xrel) (set? yrel)]}
    (if (and (seq xrel) (seq yrel))
      (let [ks (intersection (set (keys (first xrel))) (set (keys (first yrel))))
            [r s] (if (<= (count xrel) (count yrel))
@@ -186,6 +217,7 @@ user=> (rename rel {:name :title})
                #{} s))
      #{}))
   ([xrel yrel km] ;arbitrary key mapping
+   {:pre [(set? xrel) (set? yrel) (map? km)]}
    (let [[r s k] (if (<= (count xrel) (count yrel))
                    [xrel yrel (map-invert km)]
                    [yrel xrel km])
@@ -198,28 +230,34 @@ user=> (rename rel {:name :title})
              #{} s))))
 
 (defn subset? 
-  "Is set1 a subset of set2?  Throws exception if any argument s
-has (set? s) false.
+  "Is set1 a subset of set2?  True if the sets are equal.  Throws
+  exception if any argument is not a set.
 
-Example:
-TBD"
+  Examples:
+  user=> (subset? #{\"two\" \"strings\"} #{\"strings\" \"two\" \"plus\"})
+  true
+  user=> (subset? #{3 4 5} #{3 4 7})
+  false"
   {:added "1.2",
    :tag Boolean}
   [set1 set2]
-  {:pre [(and (set? set1) (set? set2))]}
+  {:pre [(set? set1) (set? set2)]}
   (and (<= (count set1) (count set2))
        (every? #(contains? set2 %) set1)))
 
 (defn superset? 
-  "Is set1 a superset of set2?  Throws exception if any argument s
-has (set? s) false.
+  "Is set1 a superset of set2?  True if the sets are equal.  Throws
+  exception if any argument is not a set.
 
-Example:
-TBD"
+  Examples:
+  user=> (superset? #{\"this\" \"has\" \"more\"} #{\"this\" \"has\"})
+  true
+  user=> (superset? #{2 3 5 7 11 13} #{9})
+  false"
   {:added "1.2",
    :tag Boolean}
   [set1 set2]
-  {:pre [(and (set? set1) (set? set2))]}
+  {:pre [(set? set1) (set? set2)]}
   (and (>= (count set1) (count set2))
        (every? #(contains? set1 %) set2)))
 
