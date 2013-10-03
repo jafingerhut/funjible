@@ -9,10 +9,53 @@ documentation.
   wrong type.
 
 
+## Releases and Dependency Information
+
+Latest stable release: 0.0.1
+
+* [All Released Versions](https://clojars.org/funjible/versions)
+
+[Leiningen](https://github.com/technomancy/leiningen) dependency information:
+
+```clojure
+[funjible "0.0.1"]
+```
+[Maven](http://maven.apache.org/) dependency information:
+
+```xml
+<dependency>
+  <groupId>funjible</groupId>
+  <artifactId>funjible</artifactId>
+  <version>0.0.1</version>
+</dependency>
+```
+
+
 ## Usage
 
-TBD: Add Leiningen dependency line to add, after I know what that will
-be.
+An example 
+```clojure
+user=> (require '[funjible.set :as set])
+nil
+user=> (set/difference #{4 5} #{4 5 6})
+#{}
+user=> (set/difference #{4 5} [4 5 6])
+
+AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:60)
+user=> (clojure.set/difference #{4 5} [4 5 6])
+#{4 5}
+user=> (doc set/difference)
+-------------------------
+funjible.set/difference
+([s1] [s1 s2] [s1 s2 & sets])
+  Return a set that is the first set without elements of the
+  remaining sets.  Throws exception if any argument is not a set.
+
+  Example:
+  user=> (difference #{2 4 6 8 10 12} #{3 6 9 12})
+  #{2 4 8 10}
+nil
+```
 
 Other Clojure set implementations:
 
