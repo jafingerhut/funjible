@@ -1,4 +1,6 @@
-# Performance results when using the following hardware and software:
+# Performance results
+
+when using the following hardware and software:
 
 * 2011 model MacBook Pro with 2 GHz Intel Core i7
 * Mac OS X 10.8.5
@@ -14,7 +16,7 @@
 * funjible.set 0.0.1
 
 
-# Comparison of mean execution times run with criterium.core/bench (60 sec runs)
+## Comparison of mean execution times run with criterium.core/bench (60 sec runs)
 
 ```
 clojure.set/union vs. funjible.set/union with args:
@@ -28,7 +30,7 @@ funjible.set/subset? vs. cojure.set/subset? with args:
 ```
 
 
-# Output from criterium
+## Output from criterium
 
 ```
 funjible.set/union vs. cojure.set/union
