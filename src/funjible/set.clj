@@ -148,18 +148,22 @@ exception if (set? xset) is false."
              #{} s))))
 
 (defn subset? 
-  "Is set1 a subset of set2?"
+  "Is set1 a subset of set2?  Throws exception if any argument s
+has (set? s) false."
   {:added "1.2",
    :tag Boolean}
   [set1 set2]
+  {:pre [(and (set? set1) (set? set2))]}
   (and (<= (count set1) (count set2))
        (every? #(contains? set2 %) set1)))
 
 (defn superset? 
-  "Is set1 a superset of set2?"
+  "Is set1 a superset of set2?  Throws exception if any argument s
+has (set? s) false."
   {:added "1.2",
    :tag Boolean}
   [set1 set2]
+  {:pre [(and (set? set1) (set? set2))]}
   (and (>= (count set1) (count set2))
        (every? #(contains? set1 %) set2)))
 
