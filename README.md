@@ -37,13 +37,20 @@ An example
 ```clojure
 user=> (require '[funjible.set :as set])
 nil
+
 user=> (set/difference #{4 5} #{4 5 6})
-#{}
+#{}        ; as expected
+
+
+user=> (clojure.set/difference #{4 5} [4 5 6])
+#{4 5}   ; definitely violates the principle of least surprise
+
+;; funjible.set throws an exception instead of quietly returning the
+;; unexpected value.
 user=> (set/difference #{4 5} [4 5 6])
 
 AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:60)
-user=> (clojure.set/difference #{4 5} [4 5 6])
-#{4 5}
+
 user=> (doc set/difference)
 -------------------------
 funjible.set/difference
