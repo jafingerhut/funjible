@@ -13,10 +13,14 @@ when using the following hardware and software:
     :jvm-opts ^:replace ["-server"]
 ```
 * criterium 0.4.2
-* funjible.set 0.0.1
+* funjible.set 0.0.1 - only changes from clojure.core/set are
+  preconditions for args having the proper type of set or map, and doc
+  strings.
 
 
-## Comparison of mean execution times run with criterium.core/bench (60 sec runs)
+## Comparison of mean execution times
+
+Run with criterium.core/bench (60 sec runs):
 
 ```
 clojure.set/union vs. funjible.set/union with args:

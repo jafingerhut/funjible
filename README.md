@@ -80,8 +80,13 @@ Other Clojure set implementations:
 
 ## Performance notes
 
-TBD: Measure performance overhead for :pre preconditions as the only
-change.
+A few performance tests show that at least some of the funjible.set
+functions are no more than 4% slower than their clojure.set
+counterparts, and usually the performance penalty is less
+percentage-wise than that.  See:
+
+* https://github.com/jafingerhut/funjible/blob/master/doc/performance-tests.md
+
 
 TBD: Investigate whether use of transients would speed things up in
 functions like union, intersection, difference, select, etc.
