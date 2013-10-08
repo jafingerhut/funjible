@@ -392,7 +392,40 @@
         (is (= exp-result (:result x)))))))
 
 
-(deftest ^:benchmark benchmark-funjible.set-vs-clojure.set-union
+;; Main factors in performance of union function with two sets as
+;; args:
+
+;; The larger set is the 'base', and the elements of the smaller set
+;; are traversed one at a time.  For each one, that element is conj'ed
+;; onto the base set (or conj!ed if a transient set is being used).
+
+;; conj/conj! seems in most cases to be faster if the element is
+;; already in the set.  That seems normal.  At least for Clojure's
+;; PersistentHashSet, conj/conj! returns an identical set if the
+;; element you 'add' is already in the set.  That should be faster
+;; than allocating and initializing memory.
+
+;; Converting the base set to a transient, conj!ing the elements of
+;; the smaller set, and converting back to a persistent set should be
+;; faster if the smaller set contains enough elements to overcome the
+;; extra time required to do the transient/persistent conversions.
+;; For any particular set type that has a transient implementation,
+;; there should be some minimum size for the second smaller set for
+;; which transients are faster (or at least usually faster), but below
+;; that they are slower (or usually slower) than not using transients.
+
+;; It is also reasonable for the run times to be longer if the base
+;; set is larger, simply because conj'ing onto a larger set is more
+;; work than conj'ing onto a small set, on average.
+
+;; The benchmark tests below use sizes 0, 4, 20, and 1000 for the base
+;; set, and sizes 0, 3, 4, 20, and 1000 for the second set.  For each
+;; second set, we measure a case where the second set is a subset of
+;; the base set, and where it is disjoint with the base set.  Those
+;; are likely to be the extreme ends of a spectrum of run times, with
+;; the disjoint case slower.
+
+(deftest ^:benchmark benchmark-union-funjible.set-vs-clojure.set
   (println "\nfunjible.set/union vs. cojure.set/union")
   (doseq [
           [f desc] [ [#(apply hash-set %) "clojure.core/hash-set"]
@@ -431,6 +464,72 @@
       (c/quick-bench (cset/union s1 s2))
       (println "--- (funjible.set/union" s1 s2 ")")
       (c/quick-bench (fset/union s1 s2))
+      )))
+
+
+;; intersection is implemented similarly to union, except the smaller
+;; of two argument sets is used as the 'base' set, and the larger one
+;; as the second set.  The elements of the smaller base set are
+;; iterated over, and for any that are not contained in the second
+;; set, they are disj'ed from the base set (or disj!ed if transients
+;; are used).
+
+;; Similar considerations apply as for union in whether transients
+;; help improve the speed.  If the smaller base set is small enough, I
+;; expect using transients to be slower, so we should only do so if
+;; the smaller base set is larger than a certain threshold size.
+
+;; As for union, I expect that two extremes for performance testing
+;; should be (1) when the second larger set is a superset of the first
+;; base set, and thus the result is equal to the base set, and (2)
+;; when the second set is disjoint with the first set, and thus the
+;; result is the empty set.  I would guess (2) would be slower, since
+;; it must remove the elements.
+
+(deftest ^:benchmark benchmark-intersection-funjible.set-vs-clojure.set
+  (println "\nfunjible.set/intersection vs. cojure.set/intersection")
+  (doseq [
+          [f desc] [ [#(apply hash-set %) "clojure.core/hash-set"]
+                     [#(apply sorted-set %) "clojure.core/sorted-set"]
+                     [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
+                     [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
+                     [bitset/dense-bitset "immutable-bitset/dense-bitset"]
+                     ]
+          [seq1 seq2] [
+                       [[] []]
+
+                       [(range 0    2) (range 0 2)]    ; 2nd is superset, same size
+                       [(range 0    2) (range 0 1000)]  ; 2nd is superset, larger
+                       [(range 0    2) (range 1000 1002)]  ; 2nd is disjoint, small
+                       [(range 0    2) (range 1000 2000)]  ; 2nd is disjoint, larger
+
+                       [(range 0    3) (range 0 3)]    ; 2nd is superset, same size
+                       [(range 0    3) (range 0 1000)]  ; 2nd is superset, larger
+                       [(range 0    3) (range 1000 1003)]  ; 2nd is disjoint, small
+                       [(range 0    3) (range 1000 2000)]  ; 2nd is disjoint, larger
+
+                       [(range 0    4) (range 0 4)]    ; 2nd is superset, same size
+                       [(range 0    4) (range 0 1000)]  ; 2nd is superset, larger
+                       [(range 0    4) (range 1000 1004)]  ; 2nd is disjoint, small
+                       [(range 0    4) (range 1000 2000)]  ; 2nd is disjoint, larger
+
+                       [(range 0   20) (range 0 20)]
+                       [(range 0   20) (range 0 1000)]
+                       [(range 0   20) (range 1000 1020)]
+                       [(range 0   20) (range 1000 2000)]
+
+                       [(range 0 1000) (range 0 1000)]
+                       [(range 0 1000) (range 0 2000)]
+                       [(range 0 1000) (range 1000 2000)]
+                       [(range 0 1000) (range 1000 3000)]
+                       ]
+          ]
+    (let [s1 (f seq1), s2 (f seq2)]
+      (printf "\n===== %s (type s1)=%s\n\n" desc (type s1))
+      (println "--- (clojure.set/intersection" s1 s2 ")")
+      (c/quick-bench (cset/intersection s1 s2))
+      (println "--- (funjible.set/intersection" s1 s2 ")")
+      (c/quick-bench (fset/intersection s1 s2))
       )))
 
 

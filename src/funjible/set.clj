@@ -72,11 +72,23 @@
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s2) (count s1))
        (recur s2 s1)
-       (reduce (fn [result item]
+       ;; TBD: Do performance tests to check, but I would guess that
+       ;; it would be faster if we only did the transient version of
+       ;; the code if (count s1) was at least some minimum value,
+       ;; e.g. 2 or 3.
+       (if (instance? clojure.lang.IEditableCollection s1)
+         (-> (reduce (fn [result item]
+                       (if (contains? s2 item)
+                         result
+                         (disj! result item)))
+                     (transient s1) s1)
+             persistent!
+             (with-meta (meta s1)))
+         (reduce (fn [result item]
                    (if (contains? s2 item)
 		     result
                      (disj result item)))
-	       s1 s1)))
+                 s1 s1))))
   ([s1 s2 & sets] 
      (let [bubbled-sets (bubble-max-key #(- (count %)) (conj sets s2 s1))]
        (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
