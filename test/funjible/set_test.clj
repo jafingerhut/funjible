@@ -392,20 +392,49 @@
         (is (= exp-result (:result x)))))))
 
 
-(comment
 (deftest ^:benchmark benchmark-funjible.set-vs-clojure.set-union
   (println "\nfunjible.set/union vs. cojure.set/union")
-  (doseq [[s1 s2] [[(hash-set) (hash-set)]
-                   [(hash-set 1 2 3) (hash-set 4 5)]
-                   ]]
-    (println)
-    (println "(funjible.set/union" s1 s2 ")")
-    (c/bench (fset/union s1 s2))
-    (println "(clojure.set/union" s1 s2 ")")
-    (c/bench (cset/union s1 s2))))
-)
+  (doseq [
+          [f desc] [ [#(apply hash-set %) "clojure.core/hash-set"]
+                     [#(apply sorted-set %) "clojure.core/sorted-set"]
+                     [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
+                     [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
+                     [bitset/dense-bitset "immutable-bitset/dense-bitset"]
+                     ]
+          [seq1 seq2] [
+                       [[] []]
+
+                       [(range 0    4) [0 1 2]]
+                       [(range 0    4) [0 1 2 3]]
+                       [(range 0    4) [1000 1001 1002]]
+                       [(range 0    4) [1000 1001 1002 1003]]
+
+                       [(range 0   20) [0 1 2]]
+                       [(range 0   20) [0 1 2 3]]
+                       [(range 0   20) (range 0 20)]
+                       [(range 0   20) [1000 1001 1002]]
+                       [(range 0   20) [1000 1001 1002 1003]]
+                       [(range 0   20) (range 1000 1020)]
+
+                       [(range 0 1000) [0 1 2]]
+                       [(range 0 1000) [0 1 2 3]]
+                       [(range 0 1000) (range 0 20)]
+                       [(range 0 1000) [1000 1001 1002]]
+                       [(range 0 1000) [1000 1001 1002 1003]]
+                       [(range 0 1000) (range 1000 1020)]
+                       [(range 0 1000) (range 1000 2000)]
+                       ]
+          ]
+    (let [s1 (f seq1), s2 (f seq2)]
+      (printf "\n===== %s (type s1)=%s\n\n" desc (type s1))
+      (println "--- (clojure.set/union" s1 s2 ")")
+      (c/quick-bench (cset/union s1 s2))
+      (println "--- (funjible.set/union" s1 s2 ")")
+      (c/quick-bench (fset/union s1 s2))
+      )))
 
 
+(comment
 (deftest ^:benchmark benchmark-funjible.set-vs-clojure.set-subset?
   (println "\nfunjible.set/subset? vs. cojure.set/subset?")
   (doseq [[s1 s2] [[(hash-set) (hash-set)]
@@ -417,3 +446,4 @@
     (c/bench (fset/subset? s1 s2))
     (println "(clojure.set/subset?" s1 s2 ")")
     (c/bench (cset/subset? s1 s2))))
+)

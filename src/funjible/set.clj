@@ -16,6 +16,17 @@
   (let [max (apply max-key k coll)]
     (cons max (remove #(identical? max %) coll))))
 
+(defn- set-into [to from]
+  ;; Conversion of 'to' to a transient and back to persistent takes
+  ;; time.  Do not bother if 'from' is small.  Very likely this check
+  ;; could only help reduce run time if count was O(1) for 'to'.
+  (if (and (instance? clojure.lang.IEditableCollection to)
+           (> (count from) 3))
+    (-> (reduce conj! (transient to) from)
+        persistent!
+        (with-meta (meta to)))
+    (reduce conj to from)))
+
 (defn union
   "Return a set that is the union of the input sets.  Throws exception
   if any argument is not a set.  The metadata and sortedness of the
@@ -32,12 +43,18 @@
   ([s1 s2]
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s1) (count s2))
-       (reduce conj s2 s1)
-       (reduce conj s1 s2)))
+       (set-into s2 s1)
+       (set-into s1 s2)))
   ([s1 s2 & sets]
      {:pre [(set? s1) (set? s2) (every? set? sets)]}
      (let [bubbled-sets (bubble-max-key count (conj sets s2 s1))]
-       (reduce into (first bubbled-sets) (rest bubbled-sets)))))
+       ;; TBD: The line below calls into N-1 times, so while it uses
+       ;; transients internally when available in Clojure 1.5.1, it
+       ;; will repeatedly change a set from transient, back to
+       ;; persistent, back to transient, etc.  May be slightly faster
+       ;; to only create one transient set and never convert it back
+       ;; to persistent until the end.
+       (reduce set-into (first bubbled-sets) (rest bubbled-sets)))))
 
 (defn intersection
   "Return a set that is the intersection of the input sets.  Throws
