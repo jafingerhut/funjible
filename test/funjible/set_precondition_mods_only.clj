@@ -8,7 +8,7 @@
 
 (ns ^{:doc "Set operations such as union/intersection."
        :author "Rich Hickey"}
-       funjible.set)
+       funjible.set-precondition-mods-only)
 
 (defn- bubble-max-key [k coll]
   "Move a maximal element of coll according to fn k (which returns a number) 
@@ -105,11 +105,9 @@
             xset xset))
 
 (defn project
-  "Takes a relation (a set of maps) xrel, and returns a relation where
-  every map contains only the keys in ks.  Throws exception if xrel is
-  not a set.  The metadata and 'sortedness' of the returned set will
-  be the same as xrel, i.e. it will be unsorted or sorted in the same
-  way that xrel is.
+  "Takes a relation (a set of maps) xrel, and returns a relation
+  where every map contains only the keys in ks.  Throws exception
+  if xrel is not a set.
 
   Example:
   user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
@@ -122,7 +120,7 @@
   {:added "1.0"}
   [xrel ks]
   {:pre [(set? xrel)]}
-  (into (empty xrel) (map #(select-keys % ks) xrel)))
+  (with-meta (set (map #(select-keys % ks) xrel)) (meta xrel)))
 
 (defn rename-keys
   "Returns the map with the keys in kmap renamed to the vals in kmap.
@@ -151,9 +149,7 @@
   "Takes a relation (a set of maps) xrel, and returns a relation where
   all keys of xrel that are in kmap have been renamed to the
   corresponding vals in kmap.  Throws exception if xrel is not a set
-  or kmap is not a map.  The metadata and 'sortedness' of the returned
-  set will be the same as xrel, i.e. it will be unsorted or sorted in
-  the same way that xrel is.
+  or kmap is not a map.
 
   Example:
   user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
@@ -167,15 +163,13 @@
   {:added "1.0"}
   [xrel kmap]
   {:pre [(set? xrel) (map? kmap)]}
-  (into (empty xrel) (map #(rename-keys % kmap) xrel)))
+  (with-meta (set (map #(rename-keys % kmap) xrel)) (meta xrel)))
 
 (defn index
   "Given a relation (a set of maps) xrel, return a map.  The keys are
   themselves maps of the distinct values of ks in xrel.  Each is
   mapped to the subset of xrel that has the corresponding values of
-  ks.  Throws exception if xrel is not a set.  Each subset of xrel
-  returned has the same metadata and 'sortedness' as xrel, i.e. they
-  will be unsorted or sorted in the same way that xrel is.
+  ks.  Throws exception if xrel is not a set.
 
   user=> (def people #{{:name \"Lakshmi\", :age 8}
                        {:name \"Hans\", :age 9}
@@ -192,15 +186,12 @@
   {:added "1.0"}
   [xrel ks]
     {:pre [(set? xrel)]}
-    (let [empty-xrel (empty xrel)]
-      (reduce
-       (fn [m x]
-         (let [ik (select-keys x ks)]
-           (assoc m ik (conj (get m ik empty-xrel) x))))
-       {} xrel)))
+    (reduce
+     (fn [m x]
+       (let [ik (select-keys x ks)]
+         (assoc m ik (conj (get m ik #{}) x))))
+     {} xrel))
 
-;; TBD: Consider changing map-invert return value to have metadata of
-;; the arg m.
 (defn map-invert
   "Returns the map with the vals mapped to the keys.  If a val appears
   more than once in the map, only one of its keys will appear in the
@@ -223,10 +214,7 @@
   "When passed 2 relations (sets of maps), returns the relation
   corresponding to the natural join.  When passed an additional
   keymap, joins on the corresponding keys.  Throws exception if xrel
-  or yrel are not sets, or if km is not a map.  The returned set will
-  always have the same metadata and 'sortedness' as the first set
-  given, i.e. the returned set will be unsorted or sorted in the same
-  way that xrel is."
+  or yrel are not sets, or if km is not a map."
   {:added "1.0"}
   ([xrel yrel] ;natural join
    {:pre [(set? xrel) (set? yrel)]}
@@ -241,8 +229,8 @@
                    (if found
                      (reduce #(conj %1 (merge %2 x)) ret found)
                      ret)))
-               (empty xrel) s))
-     (empty xrel)))
+               #{} s))
+     #{}))
   ([xrel yrel km] ;arbitrary key mapping
    {:pre [(set? xrel) (set? yrel) (map? km)]}
    (let [[r s k] (if (<= (count xrel) (count yrel))
@@ -254,7 +242,7 @@
                  (if found
                    (reduce #(conj %1 (merge %2 x)) ret found)
                    ret)))
-             (empty xrel) s))))
+             #{} s))))
 
 (defn subset? 
   "Is set1 a subset of set2?  True if the sets are equal.  Throws
