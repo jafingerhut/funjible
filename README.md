@@ -11,14 +11,14 @@ documentation.
 
 ## Releases and Dependency Information
 
-Latest stable release: 0.0.1
+Latest stable release: 0.1.0
 
 * [All Released Versions](https://clojars.org/funjible/versions)
 
 [Leiningen](https://github.com/technomancy/leiningen) dependency information:
 
 ```clojure
-[funjible "0.0.1"]
+[funjible "0.1.0"]
 ```
 [Maven](http://maven.apache.org/) dependency information:
 
@@ -26,7 +26,7 @@ Latest stable release: 0.0.1
 <dependency>
   <groupId>funjible</groupId>
   <artifactId>funjible</artifactId>
-  <version>0.0.1</version>
+  <version>0.1.0</version>
 </dependency>
 ```
 
@@ -56,7 +56,10 @@ user=> (doc set/difference)
 funjible.set/difference
 ([s1] [s1 s2] [s1 s2 & sets])
   Return a set that is the first set without elements of the
-  remaining sets.  Throws exception if any argument is not a set.
+  remaining sets.  Throws exception if any argument is not a set.  The
+  returned set will have the same metadata as s1, and will have the
+  same 'sortedness', i.e. the returned set will be sorted if and only
+  if s1 is.
 
   Example:
   user=> (difference #{2 4 6 8 10 12} #{3 6 9 12})
@@ -83,7 +86,9 @@ Other Clojure set implementations:
 A few performance tests show that at least some of the funjible.set
 functions are no more than 4% slower than their clojure.set
 counterparts, and usually the performance penalty is less
-percentage-wise than that.  See:
+percentage-wise than that.  The performance penalty in funjible.set
+0.1.0 is purely due to the extra run-time type checking of arguments
+using set?  and map?  See:
 
 * https://github.com/jafingerhut/funjible/blob/master/doc/performance-tests.md
 
