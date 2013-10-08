@@ -1,4 +1,4 @@
-(defproject funjible "0.1.0-SNAPSHOT"
+(defproject funjible "0.1.0"
   :description "Almost, but not quite, exactly like Clojure core libraries"
   :url "http://github.com/jafingerhut/funjible"
   :license {:name "Eclipse Public License"
