@@ -50,14 +50,15 @@
 ;; criterium default = 1 sec
 (def ^:dynamic *target-execution-time* (long (* 1.0 s-to-ns)))
 
-;(def ^:dynamic *sample-count* 30)
-(def ^:dynamic *sample-count* 10)
+(def ^:dynamic *sample-count* 30)
+;(def ^:dynamic *sample-count* 5)
 
 ;; No warmup except the code that estimates the number of executions
 ;; of the expression needed to take about *target-execution-time*
 ;;(def ^:dynamic *warmup-jit-period* (long (*  0 s-to-ns)))
 ;; criterium default = 10 sec
 (def ^:dynamic *warmup-jit-period* (long (* 10 s-to-ns)))
+;(def ^:dynamic *warmup-jit-period* (long (* 5 s-to-ns)))
 
 
 (defn num-digits-after-dec-point
@@ -107,9 +108,9 @@
 
 
 (defmacro benchmark
-  [bindings expr & opts]
+  [desc-map bindings expr & opts]
   `(do
-     (iprintf *err* "Benchmarking %s %s ..." '~bindings '~expr)
+     (iprintf *err* "Benchmarking %s %s %s" ~desc-map '~bindings '~expr)
      ;(criterium/quick-bench ~expr ~@opts)
      ;(criterium/bench ~expr ~@opts)
      (let ~bindings
@@ -124,6 +125,7 @@
 ;;               )
              ]
          (pp/pprint {:bindings '~bindings
+                     :description ~desc-map
                      :expr '~expr
                      :opts '~opts
                      :results results#})
@@ -180,46 +182,46 @@
 ;; the disjoint case slower.
 
 (deftest ^:benchmark benchmark-union-funjible.set-vs-clojure.set
-  (println "\nfunjible.set/union vs. cojure.set/union")
-  (doseq [
-          [f desc] [ [#(apply hash-set %) "clojure.core/hash-set"]
+  (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
+  (doseq [ [f desc] [
+                     [#(apply hash-set %) "clojure.core/hash-set"]
                      [#(apply sorted-set %) "clojure.core/sorted-set"]
                      [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
                      [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
                      [bitset/dense-bitset "immutable-bitset/dense-bitset"]
                      ]
-          [seq1 seq2] [
-                       [[] []]
-
-                       [(range 0    4) [0 1 2]]
-                       [(range 0    4) [0 1 2 3]]
-                       [(range 0    4) [1000 1001 1002]]
-                       [(range 0    4) [1000 1001 1002 1003]]
-
-                       [(range 0   20) [0 1 2]]
-                       [(range 0   20) [0 1 2 3]]
-                       [(range 0   20) (range 0 20)]
-                       [(range 0   20) [1000 1001 1002]]
-                       [(range 0   20) [1000 1001 1002 1003]]
-                       [(range 0   20) (range 1000 1020)]
-
-                       [(range 0 1000) [0 1 2]]
-                       [(range 0 1000) [0 1 2 3]]
-                       [(range 0 1000) (range 0 20)]
-                       [(range 0 1000) [1000 1001 1002]]
-                       [(range 0 1000) [1000 1001 1002 1003]]
-                       [(range 0 1000) (range 1000 1020)]
-                       [(range 0 1000) (range 1000 2000)]
-                       ]
-          ]
+           [seq1 seq2]
+           [
+            [[] []]
+            
+            [(range 0    4) [0 1 2]]
+            [(range 0    4) [0 1 2 3]]
+            [(range 0    4) [1000 1001 1002]]
+            [(range 0    4) [1000 1001 1002 1003]]
+            
+            [(range 0   20) [0 1 2]]
+            [(range 0   20) [0 1 2 3]]
+            [(range 0   20) (range 0 20)]
+            [(range 0   20) [1000 1001 1002]]
+            [(range 0   20) [1000 1001 1002 1003]]
+            [(range 0   20) (range 1000 1020)]
+            
+            [(range 0 1000) [0 1 2]]
+            [(range 0 1000) [0 1 2 3]]
+            [(range 0 1000) (range 0 20)]
+            [(range 0 1000) [1000 1001 1002]]
+            [(range 0 1000) [1000 1001 1002 1003]]
+            [(range 0 1000) (range 1000 1020)]
+            [(range 0 1000) (range 1000 2000)]
+            ]]
     (let [s1 (f seq1), s2 (f seq2)]
       ;;(printf "\n===== %s (type s1)=%s\n\n" desc (type s1))
       ;;(println "--- (clojure.set/union" s1 s2 ")")
-      ;;(criterium/quick-bench (cset/union s1 s2))
-      (benchmark [fn "clojure.set/union" desc-str desc] (cset/union s1 s2))
+      (benchmark {:fn "clojure.set/union" :set-type desc :args [s1 s2]}
+                 [] (cset/union s1 s2))
       ;;(println "--- (funjible.set/union" s1 s2 ")")
-      ;;(criterium/quick-bench (fset/union s1 s2))
-      (benchmark [fn "funjible.set/union" desc-str desc] (fset/union s1 s2))
+      (benchmark {:fn "funjible.set/union" :set-type desc :args [s1 s2]}
+                 [] (fset/union s1 s2))
       )))
 
 
@@ -242,65 +244,65 @@
 ;; result is the empty set.  I would guess (2) would be slower, since
 ;; it must remove the elements.
 
-(comment
 (deftest ^:benchmark benchmark-intersection-funjible.set-vs-clojure.set
-  (println "\nfunjible.set/intersection vs. cojure.set/intersection")
-  (doseq [
-          [f desc] [ [#(apply hash-set %) "clojure.core/hash-set"]
+  (iprintf *err* "\nfunjible.set/intersection vs. cojure.set/intersection\n")
+  (doseq [ [f desc] [
+                     [#(apply hash-set %) "clojure.core/hash-set"]
                      [#(apply sorted-set %) "clojure.core/sorted-set"]
                      [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
                      [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
                      [bitset/dense-bitset "immutable-bitset/dense-bitset"]
                      ]
-          [seq1 seq2] [
-                       [[] []]
-
-                       [(range 0    2) (range 0 2)]    ; 2nd is superset, same size
-                       [(range 0    2) (range 0 1000)]  ; 2nd is superset, larger
-                       [(range 0    2) (range 1000 1002)]  ; 2nd is disjoint, small
-                       [(range 0    2) (range 1000 2000)]  ; 2nd is disjoint, larger
-
-                       [(range 0    3) (range 0 3)]    ; 2nd is superset, same size
-                       [(range 0    3) (range 0 1000)]  ; 2nd is superset, larger
-                       [(range 0    3) (range 1000 1003)]  ; 2nd is disjoint, small
-                       [(range 0    3) (range 1000 2000)]  ; 2nd is disjoint, larger
-
-                       [(range 0    4) (range 0 4)]    ; 2nd is superset, same size
-                       [(range 0    4) (range 0 1000)]  ; 2nd is superset, larger
-                       [(range 0    4) (range 1000 1004)]  ; 2nd is disjoint, small
-                       [(range 0    4) (range 1000 2000)]  ; 2nd is disjoint, larger
-
-                       [(range 0   20) (range 0 20)]
-                       [(range 0   20) (range 0 1000)]
-                       [(range 0   20) (range 1000 1020)]
-                       [(range 0   20) (range 1000 2000)]
-
-                       [(range 0 1000) (range 0 1000)]
-                       [(range 0 1000) (range 0 2000)]
-                       [(range 0 1000) (range 1000 2000)]
-                       [(range 0 1000) (range 1000 3000)]
-                       ]
-          ]
+           [seq1 seq2]
+           [
+            [[] []]
+            
+            [(range 0    2) (range 0 2)]    ; 2nd is superset, same size
+            [(range 0    2) (range 0 1000)]  ; 2nd is superset, larger
+            [(range 0    2) (range 1000 1002)]  ; 2nd is disjoint, small
+            [(range 0    2) (range 1000 2000)]  ; 2nd is disjoint, larger
+            
+            [(range 0    3) (range 0 3)]    ; 2nd is superset, same size
+            [(range 0    3) (range 0 1000)]  ; 2nd is superset, larger
+            [(range 0    3) (range 1000 1003)]  ; 2nd is disjoint, small
+            [(range 0    3) (range 1000 2000)]  ; 2nd is disjoint, larger
+            
+            [(range 0    4) (range 0 4)]    ; 2nd is superset, same size
+            [(range 0    4) (range 0 1000)]  ; 2nd is superset, larger
+            [(range 0    4) (range 1000 1004)]  ; 2nd is disjoint, small
+            [(range 0    4) (range 1000 2000)]  ; 2nd is disjoint, larger
+            
+            [(range 0   20) (range 0 20)]
+            [(range 0   20) (range 0 1000)]
+            [(range 0   20) (range 1000 1020)]
+            [(range 0   20) (range 1000 2000)]
+            
+            [(range 0 1000) (range 0 1000)]
+            [(range 0 1000) (range 0 2000)]
+            [(range 0 1000) (range 1000 2000)]
+            [(range 0 1000) (range 1000 3000)]
+            ]]
     (let [s1 (f seq1), s2 (f seq2)]
-      (printf "\n===== %s (type s1)=%s\n\n" desc (type s1))
-      (println "--- (clojure.set/intersection" s1 s2 ")")
-      (criterium/quick-bench (cset/intersection s1 s2))
-      (println "--- (funjible.set/intersection" s1 s2 ")")
-      (criterium/quick-bench (fset/intersection s1 s2))
+      ;;(iprintf *err* "\n===== %s (type s1)=%s\n\n" desc (type s1))
+      ;;(iprintf *err* "--- (clojure.set/intersection %s %s)" s1 s2)
+      (benchmark {:fn "clojure.set/intersection" :set-type desc :args [s1 s2]}
+                 [] (cset/intersection s1 s2))
+      ;;(iprintf *err* "--- (funjible.set/intersection %s %s)" s1 s2)
+      (benchmark {:fn "funjible.set/intersection" :set-type desc :args [s1 s2]}
+                 [] (fset/intersection s1 s2))
       )))
-)
 
 
 (comment
 (deftest ^:benchmark benchmark-funjible.set-vs-clojure.set-subset?
-  (println "\nfunjible.set/subset? vs. cojure.set/subset?")
+  (iprintf *err* "\nfunjible.set/subset? vs. cojure.set/subset?\n")
   (doseq [[s1 s2] [[(hash-set) (hash-set)]
                    [(hash-set 1 2 3) (hash-set 4 5)]
                    [(hash-set 1 2 3) (hash-set 1 2 3 4)]
                    ]]
-    (println)
-    (println "(funjible.set/subset?" s1 s2 ")")
+    ;;(println)
+    ;;(println "(funjible.set/subset?" s1 s2 ")")
     (criterium/bench (fset/subset? s1 s2))
-    (println "(clojure.set/subset?" s1 s2 ")")
+    ;;(println "(clojure.set/subset?" s1 s2 ")")
     (criterium/bench (cset/subset? s1 s2))))
 )
