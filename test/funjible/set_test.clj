@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [funjible.set :as fset]
             [funjible.set-precondition-mods-only :as fset-pre-only]
+            [funjible.set-precondition-always-transient-mods :as fset-trans]
             [clojure.set :as cset]
             [avl.clj :as avl]
             [immutable-bitset :as bitset]
@@ -204,13 +205,16 @@
     (let [sets1 (legal-sets-from-elements-in-seq s1)
           sets2 (legal-sets-from-elements-in-seq s2)
           all-set-pairs (for [x1 sets1, x2 sets2] [x1 x2])
-          all-unions (apply-fns [fset/union fset-pre-only/union cset/union]
+          all-unions (apply-fns [fset/union fset-pre-only/union fset-trans/union
+                                 cset/union]
                                 all-set-pairs)
-          all-intersections (apply-fns [fset/intersection fset-pre-only/intersection
+          all-intersections (apply-fns [fset/intersection
+                                        fset-pre-only/intersection
+                                        fset-trans/intersection
                                         cset/intersection]
                                        all-set-pairs)
           all-differences (apply-fns [fset/difference fset-pre-only/difference
-                                      cset/difference]
+                                      fset-trans/difference cset/difference]
                                      all-set-pairs)]
       (printf "%d set pairs for s1=%s s2=%s\n"
               (count all-set-pairs) s1 s2)
@@ -234,9 +238,11 @@
                                    [ integer? #{:a :b :c} #{} ]
                                    ]]
     (let [sets (legal-sets-from-elements-in-seq xset)
-          all-selects (apply-fns [fset/select fset-pre-only/select cset/select]
+          all-selects (apply-fns [fset/select fset-pre-only/select
+                                  fset-trans/select cset/select]
                                  (map (fn [s] [pred s]) sets))
-          all-selects-preserving-sortedness (apply-fns [fset/select]
+          all-selects-preserving-sortedness (apply-fns [fset/select
+                                                        fset-trans/select]
                                                        (map (fn [s] [pred s]) sets))]
       (doseq [x all-selects]
         (is (= exp-result (:result x)))
@@ -264,7 +270,8 @@
             [ #{{}} [:name] #{{}} ]
             ]]
     (let [sets (legal-sets-from-elements-in-seq xrel)
-          all-projects (apply-fns [fset/project fset-pre-only/project cset/project]
+          all-projects (apply-fns [fset/project fset-pre-only/project
+                                   fset-trans/project cset/project]
                                   (map (fn [s] [s ks]) sets))]
       (doseq [x all-projects]
         (is (= exp-result (:result x)))
@@ -279,8 +286,9 @@
              [ {:a "one" :b "two" :c "three"} {:a :b :b :a} {:a "two" :b "one" :c "three"} ]
              ]]
      (let [maps (legal-maps-from-pairs-in-seq rename)
-           all-rename-keys (apply-fns [fset/rename-keys fset-pre-only/rename-keys
-                                       cset/rename-keys]
+           all-rename-keys (apply-fns [fset/rename-keys
+                                       fset-pre-only/rename-keys
+                                       fset-trans/rename-keys cset/rename-keys]
                                       (map (fn [m] [m kmap]) maps))]
        (doseq [x all-rename-keys]
          (is (= exp-result (:result x)))
@@ -302,7 +310,8 @@
                 {:name "Requiem" :composer "W. A. Mozart"}} ]
              [ #{{}} {:year :decade} #{{}} ] ]]
      (let [sets (legal-sets-from-elements-in-seq xrel)
-           all-renames (apply-fns [fset/rename fset-pre-only/rename cset/rename]
+           all-renames (apply-fns [fset/rename fset-pre-only/rename
+                                   fset-trans/rename cset/rename]
                                   (map (fn [s] [s kmap]) sets))]
        (doseq [x all-renames]
          (is (= exp-result (:result x)))
@@ -316,9 +325,11 @@
             [ #{{:c 2} {:b 1} {:a 1 :b 2}} [:b]
               {{:b 2} #{{:a 1 :b 2}}, {:b 1} #{{:b 1}} {} #{{:c 2}}} ] ]]
     (let [sets (legal-sets-from-elements-in-seq xrel)
-          all-indexes (apply-fns [fset/index fset-pre-only/index cset/index]
+          all-indexes (apply-fns [fset/index fset-pre-only/index
+                                  fset-trans/index cset/index]
                                  (map (fn [s] [s ks]) sets))
-          all-indexes-preserving-sortedness (apply-fns [fset/index]
+          all-indexes-preserving-sortedness (apply-fns [fset/index
+                                                        fset-trans/index]
                                                        (map (fn [s] [s ks]) sets))]
       (doseq [x all-indexes]
         (is (= exp-result (:result x)))
@@ -331,7 +342,8 @@
   (doseq [[m exp-result]
           [ [ {:a "one" :b "two"} {"one" :a "two" :b} ] ]]
     (let [maps (legal-maps-from-pairs-in-seq m)
-          all-inverts (apply-fns [fset/map-invert fset-pre-only/map-invert cset/map-invert]
+          all-inverts (apply-fns [fset/map-invert fset-pre-only/map-invert
+                                  fset-trans/map-invert cset/map-invert]
                                  (map (fn [m] [m]) maps))]
       (doseq [x all-inverts]
         (is (= exp-result (:result x)))
@@ -349,9 +361,12 @@
     (let [sets1 (legal-sets-from-elements-in-seq xrel1)
           sets2 (legal-sets-from-elements-in-seq xrel2)
           all-set-pairs (for [x1 sets1, x2 sets2] [x1 x2])
-          all-joins (apply-fns [fset/join fset-pre-only/join cset/join]
+          all-joins (apply-fns [fset/join fset-pre-only/join fset-trans/join
+                                cset/join]
                                all-set-pairs)
-          all-joins-preserving-metadata-sortedness (apply-fns [fset/join] all-set-pairs)]
+          all-joins-preserving-metadata-sortedness (apply-fns [fset/join
+                                                               fset-trans/join]
+                                                              all-set-pairs)]
       (doseq [x all-joins]
         (is (= exp-result (:result x))))
       (doseq [x all-joins-preserving-metadata-sortedness]
@@ -383,9 +398,11 @@
     (let [sets1 (legal-sets-from-elements-in-seq maybe-sub)
           sets2 (legal-sets-from-elements-in-seq maybe-super)
           all-set-pairs (for [x1 sets1, x2 sets2] [x1 x2])
-          all-subsets? (apply-fns [fset/subset? fset-pre-only/subset? cset/subset?]
+          all-subsets? (apply-fns [fset/subset? fset-pre-only/subset?
+                                   fset-trans/subset? cset/subset?]
                                   all-set-pairs)
-          all-supersets? (apply-fns [fset/superset? fset-pre-only/superset? cset/superset?]
+          all-supersets? (apply-fns [fset/superset? fset-pre-only/superset?
+                                     fset-trans/superset? cset/superset?]
                                     (map reverse all-set-pairs))]
       (doseq [x (concat all-subsets? all-supersets?)]
         (is (= exp-result (:result x)))))))
