@@ -10,6 +10,15 @@
        :author "Rich Hickey"}
        funjible.set-precondition-mods-only)
 
+;; This file is intended to have versions of the functions that are
+;; identical to the clojure.set versions, except they have
+;; preconditions added to check the types of their arguments.
+
+;; Motivation: These could be useful if we want to measure the extra
+;; run time cost of the preconditions, with no other changes from
+;; clojure.set.
+
+
 (defn- bubble-max-key [k coll]
   "Move a maximal element of coll according to fn k (which returns a number) 
    to the front of coll."
