@@ -1,5 +1,7 @@
 (ns funjible.set-benchmark
+  (:import [java.io PushbackReader])
   (:require [clojure.test :refer :all]
+            [clojure.edn :as edn]
             [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
@@ -306,3 +308,49 @@
     ;;(println "(clojure.set/subset?" s1 s2 ")")
     (criterium/bench (cset/subset? s1 s2))))
 )
+
+
+
+(defn read-all [fname]
+  (with-open [rdr (java.io.PushbackReader. (io/reader fname))]
+    (doall (take-while #(not= % :eof)
+                       (repeatedly #(edn/read {:eof :eof} rdr))))))
+
+
+(defn first-consec-range-of-sorted-ints [s]
+  (if-let [begin (first s)]
+    (loop [s (rest s)
+           last-seen begin]
+      (if (seq s)
+        (if (= (inc last-seen) (first s))
+          (recur (rest s) (inc last-seen))
+          [[begin last-seen] s])
+        [[begin last-seen] nil]))))
+
+
+(defn int-coll-to-ranges [c]
+  (let [x (sort c)]
+    (loop [ranges []
+           x x]
+      (if (seq x)
+        (let [[next-range x-rest] (first-consec-range-of-sorted-ints x)]
+          (recur (conj ranges (cons 'range next-range)) x-rest))
+        ranges))))
+
+
+(defn summarize-args [args]
+  (map int-coll-to-ranges args))
+
+
+(defn benchmark-good-bits [b]
+  (merge (update-in (:description b) [:args] summarize-args)
+         {:mean-time (first (get-in b [:results :mean]))}))
+
+
+(deftest ^:bench-report benchmark-report
+  (let [x (->>
+           (read-all "doc/2007-macpro/bench-1-cleaned.txt")
+           (map benchmark-good-bits))
+        ]
+    
+    ))
