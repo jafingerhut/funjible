@@ -12,4 +12,4 @@
                                   [criterium "0.4.2"]]}}
   :test-selectors {:default (complement :benchmark)
                    :benchmark :benchmark}
-  :jvm-opts ^:replace ["-server"])
+  :jvm-opts ^:replace ["-server" "-Xmx1024m"])
