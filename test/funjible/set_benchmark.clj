@@ -12,7 +12,8 @@
             [avl.clj :as avl]
             [immutable-bitset :as bitset]
             [clojure.data.priority-map :as pm]
-            [flatland.useful.deftype :as useful]
+            ;[flatland.useful.deftype :as useful]
+            [flatland.useful.map :as umap]
             [criterium.core :as criterium]))
 
 (set! *warn-on-reflection* true)
@@ -150,6 +151,55 @@
         (recur (read rdr false :eof))))))
 
 
+(defn args-from-table-form [table-form]
+  (remove (fn [x] (or (nil? x) (string? x)))
+          (apply concat table-form)))
+
+
+(defn range-spec-to-set [rs]
+  (let [[min max] rs]
+    (set (range min max))))
+
+
+(defn transform-one-arg-vec [f maybe-arg-vec]
+  (if (and (vector? maybe-arg-vec) (every? vector? maybe-arg-vec))
+    (mapv f maybe-arg-vec)
+    maybe-arg-vec))
+
+
+(defn replace-range-specs-in-table-form [table-form]
+  (mapv (fn [row]
+          (mapv #(transform-one-arg-vec range-spec-to-set %) row))
+        table-form))
+
+
+;; A list of set types and functions to construct them, that take a
+;; seq-able collection as its only arg.
+
+(def set-fn-and-descs [
+                       [#(apply hash-set %) "clojure.core/hash-set"]
+                       [#(apply sorted-set %) "clojure.core/sorted-set"]
+                       [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
+                       [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
+                       [bitset/dense-bitset "immutable-bitset/dense-bitset"]
+                       ])
+
+;; Just abbreviations for ranges of integers
+
+(def r0-2       (set (range    0    2)))
+(def r0-3       (set (range    0    3)))
+(def r0-4       (set (range    0    4)))
+(def r0-20      (set (range    0   20)))
+(def r0-100     (set (range    0  100)))
+(def r0-1000    (set (range    0 1000)))
+(def r0-3000    (set (range    0 3000)))
+(def r1000-1002 (set (range 1000 1002)))
+(def r1000-1003 (set (range 1000 1003)))
+(def r1000-1004 (set (range 1000 1004)))
+(def r1000-1020 (set (range 1000 1020)))
+(def r1000-1100 (set (range 1000 1100)))
+(def r1000-2000 (set (range 1000 2000)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 ;; Benchmarks for: union
@@ -189,40 +239,23 @@
 ;; are likely to be the extreme ends of a spectrum of run times, with
 ;; the disjoint case slower.
 
+(def union-results-table-form [
+  [ "2nd arg &rarr;" "#{}"   "#{0..2}"      "#{0..3}"      "#{0..19}"      "#{0..99}"       "#{0..999}"       "#{1000..1002}"      "#{1000..1003}"      "#{1000..1019}"      "#{1000.1099}"       "#{1000..1999}" ]
+  [ "&darr; 1st arg &darr;" ]
+  [ "#{}"            [[] []] ]
+  [ "#{0..2}"        nil     [r0-3    r0-3] nil            nil             nil              nil               [r0-3    r1000-1003] ]
+  [ "#{0..3}"        nil     [r0-4    r0-3] [r0-4    r0-4] nil             nil              nil               [r0-4    r1000-1003] [r0-4    r1000-1004] ]
+  [ "#{0..19}"       nil     [r0-20   r0-3] [r0-20   r0-4] [r0-20   r0-20] nil              nil               [r0-20   r1000-1003] [r0-20   r1000-1004] [r0-20   r1000-1020] ]
+  [ "#{0..99}"       nil     [r0-100  r0-3] [r0-100  r0-4] [r0-100  r0-20] [r0-100  r0-100] nil               [r0-100  r1000-1003] [r0-100  r1000-1004] [r0-100  r1000-1020] [r0-100  r1000-1100] ]
+  [ "#{0..999}"      nil     [r0-1000 r0-3] [r0-1000 r0-4] [r0-1000 r0-20] [r0-1000 r0-100] [r0-1000 r0-1000] [r0-1000 r1000-1003] [r0-1000 r1000-1004] [r0-1000 r1000-1020] [r0-1000 r1000-1100] [r0-1000 r1000-2000] ]
+  ])
+
 (deftest ^:benchmark benchmark-union-funjible.set-vs-clojure.set
   (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
-  (doseq [ [f desc] [
-                     [#(apply hash-set %) "clojure.core/hash-set"]
-                     [#(apply sorted-set %) "clojure.core/sorted-set"]
-                     [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
-                     [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
-                     [bitset/dense-bitset "immutable-bitset/dense-bitset"]
-                     ]
-           [seq1 seq2]
-           [
-            [[] []]
-            
-            [(range 0    4) [0 1 2]]
-            [(range 0    4) [0 1 2 3]]
-            [(range 0    4) [1000 1001 1002]]
-            [(range 0    4) [1000 1001 1002 1003]]
-            
-            [(range 0   20) [0 1 2]]
-            [(range 0   20) [0 1 2 3]]
-            [(range 0   20) (range 0 20)]
-            [(range 0   20) [1000 1001 1002]]
-            [(range 0   20) [1000 1001 1002 1003]]
-            [(range 0   20) (range 1000 1020)]
-            
-            [(range 0 1000) [0 1 2]]
-            [(range 0 1000) [0 1 2 3]]
-            [(range 0 1000) (range 0 20)]
-            [(range 0 1000) [1000 1001 1002]]
-            [(range 0 1000) [1000 1001 1002 1003]]
-            [(range 0 1000) (range 1000 1020)]
-            [(range 0 1000) (range 1000 2000)]
-            ]]
-    (let [s1 (f seq1), s2 (f seq2)]
+  (doseq [[f desc] set-fn-and-descs
+          [coll1 coll2] (args-from-table-form union-results-table-form)]
+    (let [s1 (f coll1), s2 (f coll2)]
+;      (println (format "union %s %s" s1 s2))
       (benchmark {:fn "clojure.set/union" :set-type desc :args [s1 s2]}
                  [] (cset/union s1 s2))
       (benchmark {:fn "funjible.set-trans/union" :set-type desc :args [s1 s2]}
@@ -255,45 +288,25 @@
 ;; result is the empty set.  I would guess (2) would be slower, since
 ;; it must remove the elements.
 
+(def intersection-results-table-form [
+  [ nil         "#{}"   "#{0..1}"      "#{0..2}"      "#{0..3}"      "#{0..19}"      "#{0..99}"       "#{0..999}"       "#{1000..1001}"      "#{1000..1002}"      "#{1000..1003}"      "#{1000..1019}"      "#{1000.1099}"       "#{1000..1999}" ]
+  [ "#{}"       [[] []] ]
+  [ "#{0..1}"   nil     [r0-2    r0-2] [r0-2    r0-3] [r0-2    r0-4] [r0-2    r0-20] [r0-2    r0-100] [r0-2    r0-1000] [r0-2    r1000-1002] [r0-2    r1000-1003] [r0-2    r1000-1004] [r0-2    r1000-1020] [r0-2    r1000-1100] [r0-2    r1000-2000] ]
+  [ "#{0..2}"   nil     nil            [r0-3    r0-3] [r0-3    r0-4] [r0-3    r0-20] [r0-3    r0-100] [r0-3    r0-1000] nil                  [r0-3    r1000-1003] [r0-3    r1000-1004] [r0-3    r1000-1020] [r0-3    r1000-1100] [r0-3    r1000-2000] ]
+  [ "#{0..3}"   nil     nil            nil            [r0-4    r0-4] [r0-4    r0-20] [r0-4    r0-100] [r0-4    r0-1000] nil                  nil                  [r0-4    r1000-1004] [r0-4    r1000-1020] [r0-4    r1000-1100] [r0-4    r1000-2000] ]
+  [ "#{0..19}"  nil     nil            nil            nil            [r0-20   r0-20] [r0-20   r0-100] [r0-20   r0-1000] nil                  nil                  nil                  [r0-20   r1000-1020] [r0-20   r1000-1100] [r0-20   r1000-2000] ]
+  [ "#{0..99}"  nil     nil            nil            nil            nil             [r0-100  r0-100] [r0-100  r0-1000] nil                  nil                  nil                  nil                  [r0-100  r1000-1100] [r0-100  r1000-2000] ]
+  [ "#{0..999}" nil     nil            nil            nil            nil             nil              [r0-1000 r0-1000] nil                  nil                  nil                  nil                  nil                  [r0-1000 r1000-2000] ]
+  ])
+
+;; TBD: Consider adding [r0-1000 r0-2000] and [r0-1000 r1000-3000] to the above table.
+
 (deftest ^:benchmark benchmark-intersection-funjible.set-vs-clojure.set
   (iprintf *err* "\nfunjible.set/intersection vs. cojure.set/intersection\n")
-  (doseq [ [f desc] [
-                     [#(apply hash-set %) "clojure.core/hash-set"]
-                     [#(apply sorted-set %) "clojure.core/sorted-set"]
-                     [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
-                     [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
-                     [bitset/dense-bitset "immutable-bitset/dense-bitset"]
-                     ]
-           [seq1 seq2]
-           [
-            [[] []]
-            
-            [(range 0    2) (range 0 2)]    ; 2nd is superset, same size
-            [(range 0    2) (range 0 1000)]  ; 2nd is superset, larger
-            [(range 0    2) (range 1000 1002)]  ; 2nd is disjoint, small
-            [(range 0    2) (range 1000 2000)]  ; 2nd is disjoint, larger
-            
-            [(range 0    3) (range 0 3)]    ; 2nd is superset, same size
-            [(range 0    3) (range 0 1000)]  ; 2nd is superset, larger
-            [(range 0    3) (range 1000 1003)]  ; 2nd is disjoint, small
-            [(range 0    3) (range 1000 2000)]  ; 2nd is disjoint, larger
-            
-            [(range 0    4) (range 0 4)]    ; 2nd is superset, same size
-            [(range 0    4) (range 0 1000)]  ; 2nd is superset, larger
-            [(range 0    4) (range 1000 1004)]  ; 2nd is disjoint, small
-            [(range 0    4) (range 1000 2000)]  ; 2nd is disjoint, larger
-            
-            [(range 0   20) (range 0 20)]
-            [(range 0   20) (range 0 1000)]
-            [(range 0   20) (range 1000 1020)]
-            [(range 0   20) (range 1000 2000)]
-            
-            [(range 0 1000) (range 0 1000)]
-            [(range 0 1000) (range 0 2000)]
-            [(range 0 1000) (range 1000 2000)]
-            [(range 0 1000) (range 1000 3000)]
-            ]]
-    (let [s1 (f seq1), s2 (f seq2)]
+  (doseq [[f desc] set-fn-and-descs
+          [coll1 coll2] (args-from-table-form intersection-results-table-form)]
+    (let [s1 (f coll1), s2 (f coll2)]
+;      (println (format "intersection %s %s" s1 s2))
       (benchmark {:fn "clojure.set/intersection" :set-type desc :args [s1 s2]}
                  [] (cset/intersection s1 s2))
       (benchmark {:fn "funjible.set-trans/intersection" :set-type desc :args [s1 s2]}
@@ -333,71 +346,46 @@
 ;; + the first set is larger, and a superset of the the second set
 ;; (all disj ops change the set).
 
+(def difference-results-table-form-needs-range-substitution [
+  [ nil          nil "1st is disjoint and ..." nil               "1st is subset of 2nd and ..." ]
+  [ nil          nil "one elem smaller"      "much smaller"        "one elem smaller" "much smaller" ]
+  [ "&darr; 1st &darr;" ]
+  [ "#{0..1}"    nil [[0    2] [1000 1003]]  [[0    2] [1000 4000]]  [[0    2] [0    3]]  [[0    2] [0 3000]] ]
+  [ "#{0..2}"    nil [[0    3] [1000 1004]]  [[0    3] [1000 4000]]  [[0    3] [0    4]]  [[0    3] [0 3000]] ]
+  [ "#{0..3}"    nil [[0    4] [1000 1005]]  [[0    4] [1000 4000]]  [[0    4] [0    5]]  [[0    4] [0 3000]] ]
+  [ "#{0..19}"   nil [[0   20] [1000 1021]]  [[0   20] [1000 4000]]  [[0   20] [0   21]]  [[0   20] [0 3000]] ]
+  [ "#{0..99}"   nil [[0  100] [1000 1101]]  [[0  100] [1000 4000]]  [[0  100] [0  101]]  [[0  100] [0 3000]] ]
+  [ "#{0..999}"  nil [[0 1000] [1000 2001]]  [[0 1000] [1000 4000]]  [[0 1000] [0 1001]]  [[0 1000] [0 3000]] ]
+  [ ]
+  [ nil          nil "1st is disjoint and ..." nil               "1st is superset of 2nd and ..." ]
+  [ nil          nil "one elem larger"       "much larger"         "one elem larger"  "much larger" ]
+  [ "&darr; 1st &darr;" ]
+  [ "#{0..1}"    nil [[0    2] [1000 1001]]  nil                     [[0    2] [0    1]]   ]
+  [ "#{0..2}"    nil [[0    3] [1000 1002]]  nil                     [[0    3] [0    2]]   ]
+  [ "#{0..3}"    nil [[0    4] [1000 1003]]  nil                     [[0    4] [0    3]]   ]
+  [ "#{0..19}"   nil [[0   20] [1000 1019]]  nil                     [[0   20] [0   19]]   ]
+  [ "#{0..99}"   nil [[0  100] [1000 1099]]  nil                     [[0  100] [0   99]]   ]
+  [ "#{0..999}"  nil [[0 1000] [1000 1999]]  [[0 1000] [4000 4003]]  [[0 1000] [0  999]]  [[0 1000] [0    3]] ]
+  [ "#{0..2999}" nil [[0 3000] [4000 6999]]  [[0 3000] [4000 4003]]  [[0 3000] [0 2999]]  [[0 3000] [0    3]] ]
+  [ "#{0..2999}" nil nil                     [[0 3000] [4000 5000]]  nil                  [[0 3000] [0 1000]] ]
+  ])
+
+;; TBD: Add these arg pairs to table above?
+;; [[] []]
+;; 1st is a lot larger, disjoint          [(range 0 3000) (range 4000 5000)]
+;; 1st is a lot larger, superset of 2nd   [(range 0 3000) (range 0 1000)]
+
+(def difference-results-table-form
+  (replace-range-specs-in-table-form
+   difference-results-table-form-needs-range-substitution))
+
+
 (deftest ^:benchmark benchmark-difference-funjible.set-vs-clojure.set
   (iprintf *err* "\nfunjible.set/difference vs. cojure.set/difference\n")
-  (doseq [ [f desc] [
-                     [#(apply hash-set %) "clojure.core/hash-set"]
-                     [#(apply sorted-set %) "clojure.core/sorted-set"]
-                     [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
-                     [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
-                     [bitset/dense-bitset "immutable-bitset/dense-bitset"]
-                     ]
-           [seq1 seq2]
-           [
-            [[] []]
-            
-            ;; 1st is little bit smaller, disjoint
-            [(range 0    2) (range 1000 1010)]
-            [(range 0    3) (range 1000 1013)]
-            [(range 0    4) (range 1000 1014)]
-            [(range 0   20) (range 1000 1030)]
-            [(range 0 1000) (range 1000 2010)]
-
-            ;; 1st is a lot smaller, disjoint
-            [(range 0    2) (range 1000 4000)]
-            [(range 0    3) (range 1000 4000)]
-            [(range 0    4) (range 1000 4000)]
-            [(range 0   20) (range 1000 4000)]
-            [(range 0 1000) (range 1000 4000)]
-
-            ;; 1st is little bit smaller, subset of 2nd
-            [(range 0    2) (range 0    3)]
-            [(range 0    3) (range 0    4)]
-            [(range 0    4) (range 0    5)]
-            [(range 0   20) (range 0   21)]
-            [(range 0 1000) (range 0 1001)]
-
-            ;; 1st is a lot smaller, subset of 2nd
-            [(range 0    2) (range 0 3000)]
-            [(range 0    3) (range 0 3000)]
-            [(range 0    4) (range 0 3000)]
-            [(range 0   20) (range 0 3000)]
-            [(range 0 1000) (range 0 3000)]
-
-            ;; 1st is little bit larger, disjoint
-            [(range 0    2) (range 1000 1001)]
-            [(range 0    3) (range 1000 1002)]
-            [(range 0    4) (range 1000 1003)]
-            [(range 0   20) (range 1000 1019)]
-            [(range 0 1000) (range 1000 1999)]
-
-            ;; 1st is a lot larger, disjoint
-            [(range 0 3000) (range 4000 4003)]
-            [(range 0 3000) (range 4000 5000)]
-
-            ;; 1st is little bit larger, superset of 2nd
-            [(range 0    2) (range 0    1)]
-            [(range 0    3) (range 0    2)]
-            [(range 0    4) (range 0    3)]
-            [(range 0   20) (range 0   19)]
-            [(range 0 1000) (range 0  999)]
-
-            ;; 1st is a lot larger, superset of 2nd
-            [(range 0 1000) (range 0    3)]
-            [(range 0 3000) (range 0    3)]
-            [(range 0 3000) (range 0 1000)]
-            ]]
-    (let [s1 (f seq1), s2 (f seq2)]
+  (doseq [[f desc] set-fn-and-descs
+          [coll1 coll2] (args-from-table-form difference-results-table-form)]
+    (let [s1 (f coll1), s2 (f coll2)]
+;      (println (format "difference %s %s" s1 s2))
       (benchmark {:fn "clojure.set/difference" :set-type desc :args [s1 s2]}
                  [] (cset/difference s1 s2))
       (benchmark {:fn "funjible.set-trans/difference" :set-type desc :args [s1 s2]}
@@ -453,15 +441,176 @@
   (map int-coll-to-ranges args))
 
 
-(defn benchmark-good-bits [b]
-  (merge (update-in (:description b) [:args] summarize-args)
-         {:mean-time (first (get-in b [:results :mean]))}))
+(defn map-with-keys? [x ks]
+  (and (map? x)
+       (every? #(contains? x %) ks)))
+
+
+(defn table-form? [x]
+  (and (vector? x)
+       (every? vector? x)))
+
+
+(defn table-map? [x]
+  (and (map? x)
+       (every? (fn [k]
+                 (and (vector? k)
+                      (= 2 (count k))
+                      (every? integer? k)))
+               (keys x))))
+
+
+;; Do (update-in [:args] summarize-args) on
+;; benchmark-results-interesting-bits's result to shorten the large
+;; sets with many consecutive integers.
+
+(defn benchmark-results-interesting-bits [b]
+  {:post [(map-with-keys? % [:fn :set-type :args :mean-time-sec])]}
+  (let [d (:description b)
+        [_ ns fn-name] (re-find #"^(.*)/(.*)$" (:fn d))]
+    (assoc d
+      :mean-time-sec (first (get-in b [:results :mean]))
+      :namespace ns
+      :general-fn fn-name)))
+
+
+(defn table-form-to-table-map
+  "Input tf is a 'table form', a vector of rows, where each row is a
+vector of table cell contents.  Return a 'table map', which is a map
+where the keys are vectors of the form [row col], and the
+corresponding values are the contents of the table cell at that row
+and col.  Row and col numbers begin at 0."
+  [tf]
+  {:pre [(table-form? tf)]
+   :post [(table-map? %)]}
+  (into {}
+        (apply concat
+               (map-indexed (fn [row-num row]
+                              (map-indexed (fn [col-num table-entry]
+                                             [[row-num col-num] table-entry])
+                                           row))
+                            tf))))
+
+
+(defn print-table-map-as-html!
+  [tm & opts]
+  {:pre [(table-map? tm)]}
+  (let [opts (apply hash-map opts)
+        f (:fn-table-entry-to-html opts)
+        num-rows (inc (apply max (map first (keys tm))))
+        num-cols (inc (apply max (map second (keys tm))))]
+    (print "<table style=\"text-align: right;\" border=\"1\" cellpadding=\"2\" cellspacing=\"2\">\n")
+    (if (:caption opts)
+      (printf "  <caption>%s</caption>\n" (:caption opts)))
+    (print "  <tbody>\n")
+    (dotimes [row num-rows]
+      (print "    <tr>\n")
+      (dotimes [col num-cols]
+        (print "      <td>")
+        (if-let [entry (get tm [row col])]
+          (print (if f
+                   (f entry row col)
+                   (str entry))))
+        (print "\n      </td>\n"))
+      (print "    </tr>\n"))
+    (print "  </tbody>\n")
+    (print "</table>\n")))
+
+
+;; Take a collection of benchmark results, a sequence of function
+;; names, and a sequence of set types.  Returns only information about
+;; those benchmarks results that are for one of the given function
+;; names (key :fn in the benchmark result) and set types (key
+;; :set-type).  Among the remaining benchmark results, group them by
+;; the args they were called with, where the args are keys in a map.
+;; The values in the map are themselves maps keyed by set type, and
+;; the values in those maps are themselves maps keyed by function
+;; name.
+
+(defn args-to-benchmark-results-map
+  [bench-results fn-names-seq set-type-seq]
+  {:pre [(every? #(map-with-keys? % [:fn :set-type :args]) bench-results)]}
+  (let [set-types (set set-type-seq)
+        fn-names (set fn-names-seq)]
+    (->> bench-results
+         (filter #(and (fn-names (:fn %))
+                       (set-types (:set-type %))))
+         (reduce (fn [m bench-result]
+                   (update-in m ((juxt :args :set-type :fn) bench-result)
+                              conj bench-result))
+                 {}))))
+
+
+(defn time-to-html [t]
+  (if t
+    (format "%,.0f" (* t s-to-ns))
+    "--"))
+
+
+(defn time-change-html [t1 t2]
+  (if (and t1 t2)
+    (let [pct (* 100.0 (/ (- t2 t1) t1))]
+      (format "<strong><mark>%.1f%%</mark></strong>" pct))
+    "--"))
+
+
+(defn one-arg-vec-to-html-str [arg-vec benchmark-results-map
+                               fn-names-seq set-type-seq]
+  (if-let [results (get benchmark-results-map arg-vec)]
+    (let [lines (apply concat
+                       (for [set-type set-type-seq]
+                         (if-let [type-results (get results set-type)]
+                           (let [[first-time & other-times]
+                                 (map (fn [fn-name]
+                                        (if-let [r (type-results fn-name)]
+                                          (:mean-time-sec (first r))))
+                                      fn-names-seq)]
+                             (cons (time-to-html first-time)
+                                   (mapcat (fn [t]
+                                             [(time-to-html t)
+                                              (time-change-html first-time t)])
+                                           other-times)))
+                           ;; else
+                           [])))]
+      (str/join "<br>" lines))))
+
+
+(defn print-html-results-with-table-form! [benchmark-results
+                                           table-form fn-name-seq set-type-seq]
+  (let [table-map (table-form-to-table-map table-form)
+        results-map (args-to-benchmark-results-map benchmark-results
+                                                   fn-name-seq set-type-seq)]
+    (print-table-map-as-html! table-map
+                              :fn-table-entry-to-html
+                              (fn [tm-entry row col]
+                                (cond (nil? tm-entry) "nil"
+                                      (string? tm-entry) tm-entry
+                                      (vector? tm-entry) (one-arg-vec-to-html-str tm-entry
+                                                                                  results-map
+                                                                                  fn-name-seq
+                                                                                  set-type-seq)
+                                      :else tm-entry))
+                              :caption
+                              (format "%s<br>type %s"
+                                      (str/join " vs. " fn-name-seq)
+                                      (str/join ", " set-type-seq)))))
+
+
+(defn print-all-benchmark-results! [benchmark-results]
+  (doseq [[fn-name table-form] [["union" union-results-table-form]
+                                ["intersection" intersection-results-table-form]
+                                ["difference" difference-results-table-form]]
+          set-type (map second set-fn-and-descs)]
+    (let [full-fn-names [(str "clojure.set/" fn-name)
+                         (str "funjible.set-trans/" fn-name)]]
+      (print "<hr>\n")
+      (print-html-results-with-table-form! benchmark-results table-form
+                                           full-fn-names [ set-type ]))))
 
 
 (deftest ^:bench-report benchmark-report
-  (let [x (->>
-           (read-all "doc/2007-macpro/bench-1-cleaned.txt")
-           (map benchmark-good-bits))
-        ]
-    
-    ))
+  (let [x (->> (read-all "doc/2007-macpro/bench-2.txt")
+               (map benchmark-results-interesting-bits))]
+    (with-open [wrtr (io/writer "doc/2007-macpro/bench-2.html")]
+      (binding [*out* wrtr]
+        (print-all-benchmark-results! x)))))
