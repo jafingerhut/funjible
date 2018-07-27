@@ -10,9 +10,10 @@
        :author "Rich Hickey"}
        funjible.set)
 
-(defn- bubble-max-key [k coll]
+(defn- bubble-max-key
   "Move a maximal element of coll according to fn k (which returns a number) 
    to the front of coll."
+  [k coll]
   (let [max (apply max-key k coll)]
     (cons max (remove #(identical? max %) coll))))
 
@@ -90,6 +91,9 @@
                      (disj result item)))
                  s1 s1))))
   ([s1 s2 & sets] 
+     ;; Note: No need for preconditions here, because the precondition
+     ;; in the 2-argument version will catch any non-set arguments to
+     ;; this version.
      (let [bubbled-sets (bubble-max-key #(- (count %)) (conj sets s2 s1))]
        (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
 
@@ -115,6 +119,9 @@
                s1 s1)
        (reduce disj s1 s2)))
   ([s1 s2 & sets] 
+     ;; Note: No need for preconditions here, because the precondition
+     ;; in the 2-argument version will catch any non-set arguments to
+     ;; this version.
      (reduce difference s1 (conj sets s2))))
 
 
@@ -316,6 +323,30 @@
   {:pre [(set? set1) (set? set2)]}
   (and (>= (count set1) (count set2))
        (every? #(contains? set1 %) set2)))
+
+
+(defn better-select-keys
+  "Returns a map containing only those entries in map whose key is in
+keys.  Throws exception if first arg is not a map.  The returned set
+will have the same metadata as the given map, and the same
+'sortedness', i.e. the returned map will be sorted if and only if map
+is."
+  [map keyseq]
+  {:pre [(map? map)]}
+  (loop [ret (empty map) keys (seq keyseq)]
+    (if keys
+      (let [entry (. clojure.lang.RT (find map (first keys)))]
+        (recur
+         (if entry
+           (conj ret entry)
+           ret)
+         (next keys)))
+      (with-meta ret (meta map)))))
+
+#_(alter-var-root (var clojure.core/select-keys) (constantly better-select-keys))
+#_(alter-meta! (var clojure.core/select-keys)
+             merge (select-keys (meta #'better-select-keys)
+                                [:doc :file :line :column]))
 
 (comment
 (refer 'set)
