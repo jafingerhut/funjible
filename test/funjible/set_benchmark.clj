@@ -184,6 +184,10 @@
                        [imap/dense-int-set "clojure.data.int-map/dense-int-set"]
                        ])
 
+(def short-set-fn-and-descs [
+                       [#(apply hash-set %) "clojure.core/hash-set"]
+                             ])
+
 ;; Just abbreviations for ranges of integers
 
 (def r0-2       (set (range    0    2)))
@@ -254,6 +258,26 @@
   (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
   (doseq [[f desc] set-fn-and-descs
           [coll1 coll2] (args-from-table-form union-results-table-form)]
+    (let [s1 (f coll1), s2 (f coll2)]
+;      (println (format "union %s %s" s1 s2))
+      (benchmark {:fn "clojure.set/union" :set-type desc :args [s1 s2]}
+                 [] (cset/union s1 s2))
+      (benchmark {:fn "funjible.set-trans/union" :set-type desc :args [s1 s2]}
+                 [] (fset-trans/union s1 s2))
+      )))
+
+(def short-union-results-table-form [
+  [ "2nd arg &rarr;" "#{}"   "#{0..2}"      "#{0..999}"       "#{1000..1002}"      ]
+  [ "&darr; 1st arg &darr;" ]
+  [ "#{}"            [[] []] ]
+  [ "#{0..2}"        nil     [r0-3    r0-3] nil               [r0-3    r1000-1003] ]
+  [ "#{0..999}"      nil     [r0-1000 r0-3] [r0-1000 r0-1000] [r0-1000 r1000-1003] ]
+  ])
+
+(deftest ^:short-union-benchmark short-union-benchmark-union-funjible.set-vs-clojure.set
+  (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
+  (doseq [[f desc] short-set-fn-and-descs
+          [coll1 coll2] (args-from-table-form short-union-results-table-form)]
     (let [s1 (f coll1), s2 (f coll2)]
 ;      (println (format "union %s %s" s1 s2))
       (benchmark {:fn "clojure.set/union" :set-type desc :args [s1 s2]}
@@ -456,12 +480,20 @@
 
 (defn benchmark-results-interesting-bits [b]
   {:post [(map-with-keys? % [:fn :set-type :args :mean-time-sec])]}
-  (let [d (:description b)
-        [_ ns fn-name] (re-find #"^(.*)/(.*)$" (:fn d))]
-    (assoc d
-      :mean-time-sec (first (get-in b [:results :mean]))
-      :namespace ns
-      :general-fn fn-name)))
+  (try
+    (let [d (:description b)
+          [_ ns fn-name] (re-find #"^(.*)/(.*)$" (:fn d))]
+      (assoc d
+             :mean-time-sec (first (get-in b [:results :mean]))
+             :namespace ns
+             :general-fn fn-name))
+    (catch Exception e
+      (with-open [wrtr (io/writer "benchmark-err.txt")]
+        (binding [*out* wrtr]
+          (println "Exception raised while fn benchmark-results-interesting-bits was processing this value of b, with type:" (type b))
+          (pp/pprint b)))
+      (throw e))))
+
 
 
 (defn table-form-to-table-map
@@ -611,6 +643,7 @@ and col.  Row and col numbers begin at 0."
 
 
 (deftest ^:bench-report benchmark-report
-  (println "===== generating benchmark report =====")
-  (let [x (get-bench "doc/2007-macpro/bench-2.txt")]
-    (print-tables! x "doc/2007-macpro/bench-2.html")))
+  (let [base-filename "doc/2015-mbp/short-union-benchmark"]
+    (println "===== generating benchmark report " base-filename "=====")
+    (let [x (get-bench (str base-filename ".txt"))]
+      (print-tables! x (str base-filename ".html")))))

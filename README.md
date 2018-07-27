@@ -116,9 +116,8 @@ use about 1.2 CPU cores and 0.6 Gbytes of RAM, if you have that
 available ... ]
 
 [ Edit the file test/funjible/set_benchmark.clj, inside deftest
-benchmark-report, to change the input file name to
-doc/2015-mbp/bench-1.txt, and the output file name to something
-similar, e.g. replace the "txt" suffix with "html".
+benchmark-report, to change the value of base-filename to
+"doc/2015-mbp/bench-1", without the ".txt" suffix.
 
 You will also likely need to edit the contents of the file containing
 the result data, e.g. doc/2015-mbp/bench-1.txt, to remove any line
