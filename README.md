@@ -105,6 +105,40 @@ If transients are used, remember to preserve metadata in the return
 values, in the same way that clojure.set does.
 
 
+## Running benchmarks
+
+```
+% mkdir doc/2015-mbp
+% lein test :benchmark > doc/2015-mbp/bench-1.txt
+
+[ ... this will take about 12 hours to complete, during which it will
+use about 1.2 CPU cores and 0.6 Gbytes of RAM, if you have that
+available ... ]
+
+[ Edit the file test/funjible/set_benchmark.clj, inside deftest
+benchmark-report, to change the input file name to
+doc/2015-mbp/bench-1.txt, and the output file name to something
+similar, e.g. replace the "txt" suffix with "html".
+
+You will also likely need to edit the contents of the file containing
+the result data, e.g. doc/2015-mbp/bench-1.txt, to remove any line
+like this near the beginning:
+
+lein test funjible.set-benchmark
+
+and any lines like this near the end:
+
+Ran 1 tests containing 0 assertions.
+0 failures, 0 errors.
+
+If you forget to do this, the command below will likely fail with a
+big stack trace.
+]
+
+% lein test :bench-report
+```
+
+
 ## License
 
 Copyright © 2013 Rich Hickey, Andy Fingerhut
