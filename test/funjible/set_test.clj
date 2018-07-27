@@ -1,7 +1,7 @@
 (ns funjible.set-test
   (:require [clojure.test :refer :all]
             [funjible.set :as fset]
-            [funjible.set-precondition-mods-only :as fset-pre-only]
+            [funjible.set-clj190-precondition-mods-only :as fset-pre-only]
             [funjible.set-precondition-always-transient-mods :as fset-trans]
             [clojure.set :as cset]
             [clojure.data.avl :as avl]
