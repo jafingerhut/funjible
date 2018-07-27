@@ -70,12 +70,12 @@ nil
 Other Clojure set implementations:
 
 * Zach Tellman's [immutable
-  bitsets](https://github.com/ztellman/immutable-bitset) use less
+  bitsets](https://github.com/clojure/data.int-map) use less
   memory when you only want sets of integers, especially if those
   integers have values close together.
 
 * Michał Marczyk's [sorted sets and maps using AVL
-  trees](https://github.com/michalmarczyk/avl.clj) can efficiently
+  trees](https://github.com/clojure/data.avl) can efficiently
   find the rank of elements/keys, and they have transient
   implementations for them, unlike `clojure.core`'s sorted sets and
   maps.

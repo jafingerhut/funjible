@@ -4,8 +4,8 @@
             [funjible.set-precondition-mods-only :as fset-pre-only]
             [funjible.set-precondition-always-transient-mods :as fset-trans]
             [clojure.set :as cset]
-            [avl.clj :as avl]
-            [immutable-bitset :as bitset]
+            [clojure.data.avl :as avl]
+            [clojure.data.int-map :as imap]
             [clojure.data.priority-map :as pm]
             [flatland.useful.deftype :as useful]
             [clojure.pprint :as pp]))
@@ -33,12 +33,12 @@
 ;;     hash-set       any
 ;;     sorted-set     any comparable by clojure.core/compare
 ;;     sorted-set-by  any comparable by provided compare fn
-;; avl.clj/
+;; clojure.data.avl/
 ;;     sorted-set     any comparable by clojure.core/compare
 ;;     sorted-set-by  any comparable by provided compare fn
-;; immutable-bitset/
-;;     sparse-bitset  any integer in range of Long
-;;     dense-bitset   any integer in range of Long
+;; clojure.data.int-map/
+;;     int-set        any integer in range of Long
+;;     dense-int-set  any integer in range of Long
 
 (defn legal-sets-from-elements-in-seq [s]
   (concat [ (set s)
@@ -49,8 +49,8 @@
               (apply avl/sorted-set s)
               (apply avl/sorted-set-by reverse-compare s) ])
           (if (every? #(and (number? %) (<= Long/MIN_VALUE % Long/MAX_VALUE)) s)
-            [ (bitset/sparse-bitset s)
-              (bitset/dense-bitset s) ])))
+            [ (imap/int-set s)
+              (imap/dense-int-set s) ])))
 
 
 ;; Some map types, and the types of keys they can contain:
@@ -97,8 +97,8 @@
                                   (set [1 2 3])
                                   (avl/sorted-set 1 2 3)
                                   (avl/sorted-set-by > 1 2 3)
-                                  (bitset/sparse-bitset [1 2 3])
-                                  (bitset/dense-bitset [1 2 3])]
+                                  (imap/int-set [1 2 3])
+                                  (imap/dense-int-set [1 2 3])]
         sets-without-transient-impl [(sorted-set 1 2 3)
                                      (sorted-set-by > 1 2 3)]
         sets-all (concat sets-with-transient-impl sets-without-transient-impl)]
@@ -113,14 +113,15 @@
     (doseq [s sets-without-transient-impl]
       (is (thrown? ClassCastException (transient s)))))
 
-  (doseq [s [ ;;[]  ; TBD: Uncomment this case after immutable-bitset bug of (hash #{}) throwing exception is fixed.
+  (doseq [s [ []
               [1 2 3]
               (range 1000)
               (concat (range 15 30) (range 1000000 1000010)) ]]
     (let [sets (legal-sets-from-elements-in-seq s)]
       (doseq [s1 sets, s2 sets]
-        (is (= s1 s2))
-        (is (= (hash s1) (hash s2)))))))
+        (let [msg (format "(type s1)=%s (type s2)=%s" (type s1) (type s2))]
+          (is (= s1 s2) msg)
+          (is (= (hash s1) (hash s2)) msg))))))
 
 
 (deftest throw-on-non-set-args

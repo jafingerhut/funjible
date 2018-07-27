@@ -9,8 +9,8 @@
             [funjible.set-precondition-mods-only :as fset-pre-only]
             [funjible.set-precondition-always-transient-mods :as fset-trans]
             [clojure.set :as cset]
-            [avl.clj :as avl]
-            [immutable-bitset :as bitset]
+            [clojure.data.avl :as avl]
+            [clojure.data.int-map :as imap]
             [clojure.data.priority-map :as pm]
             ;[flatland.useful.deftype :as useful]
             [flatland.useful.map :as umap]
@@ -179,9 +179,9 @@
 (def set-fn-and-descs [
                        [#(apply hash-set %) "clojure.core/hash-set"]
                        [#(apply sorted-set %) "clojure.core/sorted-set"]
-                       [#(apply avl/sorted-set %) "avl.clj/sorted-set"]
-                       [bitset/sparse-bitset "immutable-bitset/sparse-bitset"]
-                       [bitset/dense-bitset "immutable-bitset/dense-bitset"]
+                       [#(apply avl/sorted-set %) "clojure.data.avl/sorted-set"]
+                       [imap/int-set "clojure.data.int-map/int-set"]
+                       [imap/dense-int-set "clojure.data.int-map/dense-int-set"]
                        ])
 
 ;; Just abbreviations for ranges of integers
@@ -347,27 +347,17 @@
 ;; (all disj ops change the set).
 
 (def difference-results-table-form-needs-range-substitution [
-  [ nil          nil "1st is disjoint and ..." nil               "1st is subset of 2nd and ..." ]
-  [ nil          nil "one elem smaller"      "much smaller"        "one elem smaller" "much smaller" ]
+  [ nil          nil "1st is disjoint and ..." nil                   "1st is subset of 2nd and ..." nil        nil "1st is disjoint and ..." nil               "1st is superset of 2nd and ..." ]
+  [ nil          nil "one elem smaller"      "much smaller"          "one elem smaller" "much smaller"         nil "one elem larger"       "much larger"         "one elem larger"  "much larger" ]
   [ "&darr; 1st &darr;" ]
-  [ "#{0..1}"    nil [[0    2] [1000 1003]]  [[0    2] [1000 4000]]  [[0    2] [0    3]]  [[0    2] [0 3000]] ]
-  [ "#{0..2}"    nil [[0    3] [1000 1004]]  [[0    3] [1000 4000]]  [[0    3] [0    4]]  [[0    3] [0 3000]] ]
-  [ "#{0..3}"    nil [[0    4] [1000 1005]]  [[0    4] [1000 4000]]  [[0    4] [0    5]]  [[0    4] [0 3000]] ]
-  [ "#{0..19}"   nil [[0   20] [1000 1021]]  [[0   20] [1000 4000]]  [[0   20] [0   21]]  [[0   20] [0 3000]] ]
-  [ "#{0..99}"   nil [[0  100] [1000 1101]]  [[0  100] [1000 4000]]  [[0  100] [0  101]]  [[0  100] [0 3000]] ]
-  [ "#{0..999}"  nil [[0 1000] [1000 2001]]  [[0 1000] [1000 4000]]  [[0 1000] [0 1001]]  [[0 1000] [0 3000]] ]
-  [ ]
-  [ nil          nil "1st is disjoint and ..." nil               "1st is superset of 2nd and ..." ]
-  [ nil          nil "one elem larger"       "much larger"         "one elem larger"  "much larger" ]
-  [ "&darr; 1st &darr;" ]
-  [ "#{0..1}"    nil [[0    2] [1000 1001]]  nil                     [[0    2] [0    1]]   ]
-  [ "#{0..2}"    nil [[0    3] [1000 1002]]  nil                     [[0    3] [0    2]]   ]
-  [ "#{0..3}"    nil [[0    4] [1000 1003]]  nil                     [[0    4] [0    3]]   ]
-  [ "#{0..19}"   nil [[0   20] [1000 1019]]  nil                     [[0   20] [0   19]]   ]
-  [ "#{0..99}"   nil [[0  100] [1000 1099]]  nil                     [[0  100] [0   99]]   ]
-  [ "#{0..999}"  nil [[0 1000] [1000 1999]]  [[0 1000] [4000 4003]]  [[0 1000] [0  999]]  [[0 1000] [0    3]] ]
-  [ "#{0..2999}" nil [[0 3000] [4000 6999]]  [[0 3000] [4000 4003]]  [[0 3000] [0 2999]]  [[0 3000] [0    3]] ]
-  [ "#{0..2999}" nil nil                     [[0 3000] [4000 5000]]  nil                  [[0 3000] [0 1000]] ]
+  [ "#{0..1}"    nil [[0    2] [1000 1003]]  [[0    2] [1000 4000]]  [[0    2] [0    3]]  [[0    2] [0 3000]]  nil [[0    2] [1000 1001]]  nil                     [[0    2] [0    1]]   ]
+  [ "#{0..2}"    nil [[0    3] [1000 1004]]  [[0    3] [1000 4000]]  [[0    3] [0    4]]  [[0    3] [0 3000]]  nil [[0    3] [1000 1002]]  nil                     [[0    3] [0    2]]   ]
+  [ "#{0..3}"    nil [[0    4] [1000 1005]]  [[0    4] [1000 4000]]  [[0    4] [0    5]]  [[0    4] [0 3000]]  nil [[0    4] [1000 1003]]  nil                     [[0    4] [0    3]]   ]
+  [ "#{0..19}"   nil [[0   20] [1000 1021]]  [[0   20] [1000 4000]]  [[0   20] [0   21]]  [[0   20] [0 3000]]  nil [[0   20] [1000 1019]]  nil                     [[0   20] [0   19]]   ]
+  [ "#{0..99}"   nil [[0  100] [1000 1101]]  [[0  100] [1000 4000]]  [[0  100] [0  101]]  [[0  100] [0 3000]]  nil [[0  100] [1000 1099]]  nil                     [[0  100] [0   99]]   ]
+  [ "#{0..999}"  nil [[0 1000] [1000 2001]]  [[0 1000] [1000 4000]]  [[0 1000] [0 1001]]  [[0 1000] [0 3000]]  nil [[0 1000] [1000 1999]]  [[0 1000] [4000 4003]]  [[0 1000] [0  999]]  [[0 1000] [0    3]] ]
+  [ "#{0..2999}" nil nil                     nil                     nil                  nil                  nil [[0 3000] [4000 6999]]  [[0 3000] [4000 4003]]  [[0 3000] [0 2999]]  [[0 3000] [0    3]] ]
+  [ "#{0..2999}" nil nil                     nil                     nil                  nil                  nil nil                     [[0 3000] [4000 5000]]  nil                  [[0 3000] [0 1000]] ]
   ])
 
 ;; TBD: Add these arg pairs to table above?
@@ -608,9 +598,18 @@ and col.  Row and col numbers begin at 0."
                                            full-fn-names [ set-type ]))))
 
 
+(defn get-bench [fname]
+  (->> (read-all fname)
+       (map benchmark-results-interesting-bits)))
+
+
+(defn print-tables! [benchmark-results fname]
+  (with-open [wrtr (io/writer fname)]
+    (binding [*out* wrtr]
+      (print-all-benchmark-results! benchmark-results))))
+
+
+
 (deftest ^:bench-report benchmark-report
-  (let [x (->> (read-all "doc/2007-macpro/bench-2.txt")
-               (map benchmark-results-interesting-bits))]
-    (with-open [wrtr (io/writer "doc/2007-macpro/bench-2.html")]
-      (binding [*out* wrtr]
-        (print-all-benchmark-results! x)))))
+  (let [x (get-bench "doc/2007-macpro/bench-2.txt")]
+    (print-tables! x "doc/2007-macpro/bench-2.html")))
