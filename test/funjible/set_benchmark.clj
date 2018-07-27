@@ -611,5 +611,6 @@ and col.  Row and col numbers begin at 0."
 
 
 (deftest ^:bench-report benchmark-report
+  (println "===== generating benchmark report =====")
   (let [x (get-bench "doc/2007-macpro/bench-2.txt")]
     (print-tables! x "doc/2007-macpro/bench-2.html")))
