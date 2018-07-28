@@ -274,7 +274,19 @@
   [ "#{0..999}"      nil     [r0-1000 r0-3] [r0-1000 r0-1000] [r0-1000 r1000-1003] ]
   ])
 
-(deftest ^:short-union-benchmark short-union-benchmark-union-funjible.set-vs-clojure.set
+(deftest ^:short-union-benchmark1 short-union-benchmark-union-funjible.set-vs-clojure.set
+  (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
+  (doseq [[f desc] short-set-fn-and-descs
+          [coll1 coll2] (args-from-table-form short-union-results-table-form)]
+    (let [s1 (f coll1), s2 (f coll2)]
+;      (println (format "union %s %s" s1 s2))
+      (benchmark {:fn "clojure.set/union" :set-type desc :args [s1 s2]}
+                 [] (cset/union s1 s2))
+      (benchmark {:fn "funjible.fset-pre-only/union" :set-type desc :args [s1 s2]}
+                 [] (fset-pre-only/union s1 s2))
+      )))
+
+(deftest ^:short-union-benchmark2 short-union-benchmark-union-funjible.set-vs-clojure.set
   (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
   (doseq [[f desc] short-set-fn-and-descs
           [coll1 coll2] (args-from-table-form short-union-results-table-form)]
@@ -643,7 +655,7 @@ and col.  Row and col numbers begin at 0."
 
 
 (deftest ^:bench-report benchmark-report
-  (let [base-filename "doc/2015-mbp/short-union-benchmark"]
+  (let [base-filename "doc/2015-mbp/short-union-benchmark1"]
     (println "===== generating benchmark report " base-filename "=====")
     (let [x (get-bench (str base-filename ".txt"))]
       (print-tables! x (str base-filename ".html")))))
