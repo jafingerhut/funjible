@@ -12,6 +12,7 @@
                                   [criterium "0.4.2"]]}}
   :test-selectors {:default (fn [m] (not (or (:benchmark m) (:bench-report m))))
                    :benchmark :benchmark
-                   :short-union-benchmark :short-union-benchmark
+                   :short-union-benchmark1 :short-union-benchmark1
+                   :short-union-benchmark2 :short-union-benchmark2
                    :bench-report :bench-report}
   :jvm-opts ^:replace ["-server" "-Xmx1024m"])
