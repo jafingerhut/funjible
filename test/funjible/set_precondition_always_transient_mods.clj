@@ -22,9 +22,10 @@
 ;; because of the use of transients.
 
 
-(defn- bubble-max-key [k coll]
+(defn- bubble-max-key
   "Move a maximal element of coll according to fn k (which returns a number) 
    to the front of coll."
+  [k coll]
   (let [max (apply max-key k coll)]
     (cons max (remove #(identical? max %) coll))))
 
@@ -94,6 +95,9 @@
                      (disj result item)))
                  s1 s1))))
   ([s1 s2 & sets] 
+     ;; Note: No need for preconditions here, because the precondition
+     ;; in the 2-argument version will catch any non-set arguments to
+     ;; this version.
      (let [bubbled-sets (bubble-max-key #(- (count %)) (conj sets s2 s1))]
        (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
 
@@ -131,6 +135,9 @@
              (with-meta (meta s1)))
          (reduce disj s1 s2))))
   ([s1 s2 & sets] 
+     ;; Note: No need for preconditions here, because the precondition
+     ;; in the 2-argument version will catch any non-set arguments to
+     ;; this version.
      (reduce difference s1 (conj sets s2))))
 
 
