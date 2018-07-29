@@ -10,19 +10,21 @@
        :author "Rich Hickey"}
        funjible.set-clj190-precondition-mods-only)
 
-;; This file is intended to have versions of the functions that are
-;; identical to the clojure.set versions from Clojure 1.9.0, except
-;; they have preconditions added to check the types of their
-;; arguments.
 
-;; Motivation: These could be useful if we want to measure the extra
-;; run time cost of the preconditions, with no other changes from
-;; clojure.set.
+;; The only differences from the Clojure 1.9.0 version of
+;; src/clj/clojure/set.clj and this file are:
+;;
+;;
+;; + The name of the namespace
+;;
+;; + This one has added preconditions on most functions, checking that
+;;   the arguments have the expected the types.
 
 
-(defn- bubble-max-key [k coll]
+(defn- bubble-max-key
   "Move a maximal element of coll according to fn k (which returns a
   number) to the front of coll."
+  [k coll]
   (let [max (apply max-key k coll)]
     (cons max (remove #(identical? max %) coll))))
 
@@ -30,7 +32,9 @@
   "Return a set that is the union of the input sets"
   {:added "1.0"}
   ([] #{})
-  ([s1] {:pre [(set? s1)]} s1)
+  ([s1]
+     {:pre [(set? s1)]}
+     s1)
   ([s1 s2]
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s1) (count s2))
@@ -44,7 +48,9 @@
 (defn intersection
   "Return a set that is the intersection of the input sets"
   {:added "1.0"}
-  ([s1] {:pre [(set? s1)]} s1)
+  ([s1]
+     {:pre [(set? s1)]}
+     s1)
   ([s1 s2]
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s2) (count s1))
@@ -55,8 +61,8 @@
                      (disj result item)))
 	       s1 s1)))
   ([s1 s2 & sets] 
-     ;; Note: No need for preconditions here, because the precondition
-     ;; in the 2-argument version will catch any non-set arguments to
+     ;; No need for preconditions here, because the precondition in
+     ;; the 2-argument version will catch any non-set arguments to
      ;; this version.
      (let [bubbled-sets (bubble-max-key #(- (count %)) (conj sets s2 s1))]
        (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
@@ -64,7 +70,9 @@
 (defn difference
   "Return a set that is the first set without elements of the remaining sets"
   {:added "1.0"}
-  ([s1] {:pre [(set? s1)]} s1)
+  ([s1]
+     {:pre [(set? s1)]}
+     s1)
   ([s1 s2] 
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s1) (count s2))
@@ -75,8 +83,8 @@
                s1 s1)
        (reduce disj s1 s2)))
   ([s1 s2 & sets] 
-     ;; Note: No need for preconditions here, because the precondition
-     ;; in the 2-argument version will catch any non-set arguments to
+     ;; No need for preconditions here, because the precondition in
+     ;; the 2-argument version will catch any non-set arguments to
      ;; this version.
      (reduce difference s1 (conj sets s2))))
 
@@ -126,7 +134,7 @@
        (let [ik (select-keys x ks)]
          (assoc m ik (conj (get m ik #{}) x))))
      {} xrel))
-
+   
 (defn map-invert
   "Returns the map with the vals mapped to the keys."
   {:added "1.0"}
