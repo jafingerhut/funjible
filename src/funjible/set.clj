@@ -10,23 +10,33 @@
        :author "Rich Hickey"}
        funjible.set)
 
+
+;; The only differences from the Clojure 1.9.0 version of
+;; src/clj/clojure/set.clj and this file are:
+;;
+;; + The name of the namespace
+;;
+;; + This one has added preconditions on most functions, checking that
+;;   the arguments have the expected the types.
+;;
+;; + This one has additions to the doc strings, with more details and
+;;   examples.
+;;
+;; + When loaded or required, this one _modifies_ the definitions of
+;;   the corresponding original versions in namespace clojure.set to
+;;   become the modified versions defined in this file.  This enables
+;;   someone to require this namespace, and then everywhere in their
+;;   program that uses clojure.set will afterwards be using these
+;;   modified versions, except for any places that were compiled with
+;;   direct linking to the original Clojure 1.9.0 versions.
+
+
 (defn- bubble-max-key
-  "Move a maximal element of coll according to fn k (which returns a number) 
-   to the front of coll."
+  "Move a maximal element of coll according to fn k (which returns a
+  number) to the front of coll."
   [k coll]
   (let [max (apply max-key k coll)]
     (cons max (remove #(identical? max %) coll))))
-
-(defn- set-into [to from]
-  ;; Conversion of 'to' to a transient and back to persistent takes
-  ;; time.  Do not bother if 'from' is small.  Very likely this check
-  ;; could only help reduce run time if count was O(1) for 'to'.
-  (if (and (instance? clojure.lang.IEditableCollection to)
-           (> (count from) 3))
-    (-> (reduce conj! (transient to) from)
-        persistent!
-        (with-meta (meta to)))
-    (reduce conj to from)))
 
 (defn union
   "Return a set that is the union of the input sets.  Throws exception
@@ -40,22 +50,18 @@
   #{1 :a \"b\" {:foo 7} -82}"
   {:added "1.0"}
   ([] #{})
-  ([s1] {:pre [(set? s1)]} s1)
+  ([s1]
+     {:pre [(set? s1)]}
+     s1)
   ([s1 s2]
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s1) (count s2))
-       (set-into s2 s1)
-       (set-into s1 s2)))
+       (reduce conj s2 s1)
+       (reduce conj s1 s2)))
   ([s1 s2 & sets]
      {:pre [(set? s1) (set? s2) (every? set? sets)]}
      (let [bubbled-sets (bubble-max-key count (conj sets s2 s1))]
-       ;; TBD: The line below calls into N-1 times, so while it uses
-       ;; transients internally when available in Clojure 1.5.1, it
-       ;; will repeatedly change a set from transient, back to
-       ;; persistent, back to transient, etc.  May be slightly faster
-       ;; to only create one transient set and never convert it back
-       ;; to persistent until the end.
-       (reduce set-into (first bubbled-sets) (rest bubbled-sets)))))
+       (reduce into (first bubbled-sets) (rest bubbled-sets)))))
 
 (defn intersection
   "Return a set that is the intersection of the input sets.  Throws
@@ -68,31 +74,21 @@
   user=> (intersection #{:k1 #{8/3 5} \"bar\"} #{:k1 \"goo\" #{8/3 5}})
   #{#{5 8/3} :k1}"
   {:added "1.0"}
-  ([s1] {:pre [(set? s1)]} s1)
+  ([s1]
+     {:pre [(set? s1)]}
+     s1)
   ([s1 s2]
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s2) (count s1))
        (recur s2 s1)
-       ;; TBD: Do performance tests to check, but I would guess that
-       ;; it would be faster if we only did the transient version of
-       ;; the code if (count s1) was at least some minimum value,
-       ;; e.g. 2 or 3.
-       (if (instance? clojure.lang.IEditableCollection s1)
-         (-> (reduce (fn [result item]
-                       (if (contains? s2 item)
-                         result
-                         (disj! result item)))
-                     (transient s1) s1)
-             persistent!
-             (with-meta (meta s1)))
-         (reduce (fn [result item]
+       (reduce (fn [result item]
                    (if (contains? s2 item)
 		     result
                      (disj result item)))
-                 s1 s1))))
+	       s1 s1)))
   ([s1 s2 & sets] 
-     ;; Note: No need for preconditions here, because the precondition
-     ;; in the 2-argument version will catch any non-set arguments to
+     ;; No need for preconditions here, because the precondition in
+     ;; the 2-argument version will catch any non-set arguments to
      ;; this version.
      (let [bubbled-sets (bubble-max-key #(- (count %)) (conj sets s2 s1))]
        (reduce intersection (first bubbled-sets) (rest bubbled-sets)))))
@@ -108,7 +104,9 @@
   user=> (difference #{2 4 6 8 10 12} #{3 6 9 12})
   #{2 4 8 10}"
   {:added "1.0"}
-  ([s1] {:pre [(set? s1)]} s1)
+  ([s1]
+     {:pre [(set? s1)]}
+     s1)
   ([s1 s2] 
      {:pre [(set? s1) (set? s2)]}
      (if (< (count s1) (count s2))
@@ -119,8 +117,8 @@
                s1 s1)
        (reduce disj s1 s2)))
   ([s1 s2 & sets] 
-     ;; Note: No need for preconditions here, because the precondition
-     ;; in the 2-argument version will catch any non-set arguments to
+     ;; No need for preconditions here, because the precondition in
+     ;; the 2-argument version will catch any non-set arguments to
      ;; this version.
      (reduce difference s1 (conj sets s2))))
 
@@ -143,9 +141,8 @@
 (defn project
   "Takes a relation (a set of maps) xrel, and returns a relation where
   every map contains only the keys in ks.  Throws exception if xrel is
-  not a set.  The metadata and 'sortedness' of the returned set will
-  be the same as xrel, i.e. it will be unsorted or sorted in the same
-  way that xrel is.
+  not a set.  The metadata of the returned set will be the same as
+  xrel.
 
   Example:
   user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
@@ -158,7 +155,7 @@
   {:added "1.0"}
   [xrel ks]
   {:pre [(set? xrel)]}
-  (into (empty xrel) (map #(select-keys % ks) xrel)))
+  (with-meta (set (map #(select-keys % ks) xrel)) (meta xrel)))
 
 (defn rename-keys
   "Returns the map with the keys in kmap renamed to the vals in kmap.
@@ -187,9 +184,8 @@
   "Takes a relation (a set of maps) xrel, and returns a relation where
   all keys of xrel that are in kmap have been renamed to the
   corresponding vals in kmap.  Throws exception if xrel is not a set
-  or kmap is not a map.  The metadata and 'sortedness' of the returned
-  set will be the same as xrel, i.e. it will be unsorted or sorted in
-  the same way that xrel is.
+  or kmap is not a map.  The metadata of the returned set will be the
+  same as xrel.
 
   Example:
   user=> (def rel #{{:name \"Art of the Fugue\" :composer \"J. S. Bach\"}
@@ -203,7 +199,7 @@
   {:added "1.0"}
   [xrel kmap]
   {:pre [(set? xrel) (map? kmap)]}
-  (into (empty xrel) (map #(rename-keys % kmap) xrel)))
+  (with-meta (set (map #(rename-keys % kmap) xrel)) (meta xrel)))
 
 (defn index
   "Given a relation (a set of maps) xrel, return a map.  The keys are
@@ -228,15 +224,12 @@
   {:added "1.0"}
   [xrel ks]
     {:pre [(set? xrel)]}
-    (let [empty-xrel (empty xrel)]
-      (reduce
-       (fn [m x]
-         (let [ik (select-keys x ks)]
-           (assoc m ik (conj (get m ik empty-xrel) x))))
-       {} xrel)))
-
-;; TBD: Consider changing map-invert return value to have metadata of
-;; the arg m.
+    (reduce
+     (fn [m x]
+       (let [ik (select-keys x ks)]
+         (assoc m ik (conj (get m ik #{}) x))))
+     {} xrel))
+   
 (defn map-invert
   "Returns the map with the vals mapped to the keys.  If a val appears
   more than once in the map, only one of its keys will appear in the
@@ -259,10 +252,10 @@
   "When passed 2 relations (sets of maps), returns the relation
   corresponding to the natural join.  When passed an additional
   keymap, joins on the corresponding keys.  Throws exception if xrel
-  or yrel are not sets, or if km is not a map.  The returned set will
-  always have the same metadata and 'sortedness' as the first set
-  given, i.e. the returned set will be unsorted or sorted in the same
-  way that xrel is."
+  or yrel are not sets, or if km is not a map.  The returned set has
+  no metadata, and is not guaranteed to be any particular type of
+  set (e.g. if xrel is a sorted map, there is no promise the returned
+  set will be sorted.)"
   {:added "1.0"}
   ([xrel yrel] ;natural join
    {:pre [(set? xrel) (set? yrel)]}
@@ -277,8 +270,8 @@
                    (if found
                      (reduce #(conj %1 (merge %2 x)) ret found)
                      ret)))
-               (empty xrel) s))
-     (empty xrel)))
+               #{} s))
+     #{}))
   ([xrel yrel km] ;arbitrary key mapping
    {:pre [(set? xrel) (set? yrel) (map? km)]}
    (let [[r s k] (if (<= (count xrel) (count yrel))
@@ -290,7 +283,7 @@
                  (if found
                    (reduce #(conj %1 (merge %2 x)) ret found)
                    ret)))
-             (empty xrel) s))))
+             #{} s))))
 
 (defn subset? 
   "Is set1 a subset of set2?  True if the sets are equal.  Throws
@@ -325,28 +318,37 @@
        (every? #(contains? set1 %) set2)))
 
 
-(defn better-select-keys
-  "Returns a map containing only those entries in map whose key is in
-keys.  Throws exception if first arg is not a map.  The returned set
-will have the same metadata as the given map, and the same
-'sortedness', i.e. the returned map will be sorted if and only if map
-is."
-  [map keyseq]
-  {:pre [(map? map)]}
-  (loop [ret (empty map) keys (seq keyseq)]
-    (if keys
-      (let [entry (. clojure.lang.RT (find map (first keys)))]
-        (recur
-         (if entry
-           (conj ret entry)
-           ret)
-         (next keys)))
-      (with-meta ret (meta map)))))
+(defn- update-var-val-and-meta
+  "Given a Var orig-var and another new-var, replace the value of
+  orig-var with that of new-var, using alter-var-root.  Afterwards,
+  any calls made to the function that is the value of orig-var will
+  behave the same as calls to new-var (unless they were compiled with
+  direct linking enabled, in which case they will still use the
+  original definition).
 
-#_(alter-var-root (var clojure.core/select-keys) (constantly better-select-keys))
-#_(alter-meta! (var clojure.core/select-keys)
-             merge (select-keys (meta #'better-select-keys)
-                                [:doc :file :line :column]))
+  Also replace the values of metadata keys :doc :file :line
+  and :column of orig-var with the corresponding values of those keys
+  from var new-var, using alter-meta!.  Afterwards, and any uses of
+  clojure.repl/doc or clojure.repl/source on orig-var will see the new
+  definition, not the original one."
+  [orig-var new-var]
+  (alter-var-root orig-var (constantly (deref new-var)))
+  (alter-meta! orig-var merge (select-keys (meta new-var)
+                                           [:doc :file :line :column])))
+
+(update-var-val-and-meta #'clojure.set/union #'union)
+(update-var-val-and-meta #'clojure.set/intersection #'intersection)
+(update-var-val-and-meta #'clojure.set/difference #'difference)
+(update-var-val-and-meta #'clojure.set/select #'select)
+(update-var-val-and-meta #'clojure.set/project #'project)
+(update-var-val-and-meta #'clojure.set/rename-keys #'rename-keys)
+(update-var-val-and-meta #'clojure.set/rename #'rename)
+(update-var-val-and-meta #'clojure.set/index #'index)
+(update-var-val-and-meta #'clojure.set/map-invert #'map-invert)
+(update-var-val-and-meta #'clojure.set/join #'join)
+(update-var-val-and-meta #'clojure.set/subset? #'subset?)
+(update-var-val-and-meta #'clojure.set/superset? #'superset?)
+
 
 (comment
 (refer 'set)
