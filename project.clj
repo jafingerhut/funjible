@@ -10,7 +10,10 @@
                                   [org.flatland/useful "0.11.5"]
                                   [org.clojure/tools.trace "0.7.6"]
                                   [criterium "0.4.2"]]}}
-  :test-selectors {:default (fn [m] (not (or (:benchmark m) (:bench-report m))))
+  :test-selectors {:default (fn [m] (not (or (:benchmark m)
+                                             (:short-union-benchmark1 m)
+                                             (:short-union-benchmark2 m)
+                                             (:bench-report m))))
                    :benchmark :benchmark
                    :short-union-benchmark1 :short-union-benchmark1
                    :short-union-benchmark2 :short-union-benchmark2
