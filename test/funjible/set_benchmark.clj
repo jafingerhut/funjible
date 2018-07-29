@@ -267,14 +267,14 @@
       )))
 
 (def short-union-results-table-form [
-  [ "2nd arg &rarr;" "#{}"   "#{0..2}"      "#{0..999}"       "#{1000..1002}"      ]
+  [ "2nd arg &rarr;" "#{}"   "#{0..2}"      "#{0..999}"       "#{1000..1002}"      "#{1000..1999}" ]
   [ "&darr; 1st arg &darr;" ]
   [ "#{}"            [[] []] ]
   [ "#{0..2}"        nil     [r0-3    r0-3] nil               [r0-3    r1000-1003] ]
-  [ "#{0..999}"      nil     [r0-1000 r0-3] [r0-1000 r0-1000] [r0-1000 r1000-1003] ]
+  [ "#{0..999}"      nil     [r0-1000 r0-3] [r0-1000 r0-1000] [r0-1000 r1000-1003] [r0-1000 r1000-2000] ]
   ])
 
-(deftest ^:short-union-benchmark1 short-union-benchmark-union-funjible.set-vs-clojure.set
+(deftest ^:short-union-benchmark1 short-union-benchmark1-union-funjible.set-vs-clojure.set
   (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
   (doseq [[f desc] short-set-fn-and-descs
           [coll1 coll2] (args-from-table-form short-union-results-table-form)]
@@ -282,11 +282,11 @@
 ;      (println (format "union %s %s" s1 s2))
       (benchmark {:fn "clojure.set/union" :set-type desc :args [s1 s2]}
                  [] (cset/union s1 s2))
-      (benchmark {:fn "funjible.fset-pre-only/union" :set-type desc :args [s1 s2]}
+      (benchmark {:fn "funjible.set-pre-only/union" :set-type desc :args [s1 s2]}
                  [] (fset-pre-only/union s1 s2))
       )))
 
-(deftest ^:short-union-benchmark2 short-union-benchmark-union-funjible.set-vs-clojure.set
+(deftest ^:short-union-benchmark2 short-union-benchmark2-union-funjible.set-vs-clojure.set
   (iprintf *err* "\nfunjible.set/union vs. cojure.set/union\n")
   (doseq [[f desc] short-set-fn-and-descs
           [coll1 coll2] (args-from-table-form short-union-results-table-form)]
@@ -636,7 +636,17 @@ and col.  Row and col numbers begin at 0."
                                 ["difference" difference-results-table-form]]
           set-type (map second set-fn-and-descs)]
     (let [full-fn-names [(str "clojure.set/" fn-name)
-                         (str "funjible.set-trans/" fn-name)]]
+                         (str
+
+                          ;; Use this string if you ran experiments
+                          ;; with :short-union-benchmark1
+                          ;;"funjible.set-pre-only/"
+
+                          ;; Use this string if you ran any other
+                          ;; experiments.
+                          "funjible.set-trans/"
+
+                          fn-name)]]
       (print "<hr>\n")
       (print-html-results-with-table-form! benchmark-results table-form
                                            full-fn-names [ set-type ]))))
@@ -655,7 +665,7 @@ and col.  Row and col numbers begin at 0."
 
 
 (deftest ^:bench-report benchmark-report
-  (let [base-filename "doc/2015-mbp/short-union-benchmark1"]
+  (let [base-filename "doc/2015-mbp/bench-only-adding-preconditions.edited"]
     (println "===== generating benchmark report " base-filename "=====")
     (let [x (get-bench (str base-filename ".txt"))]
       (print-tables! x (str base-filename ".html")))))
