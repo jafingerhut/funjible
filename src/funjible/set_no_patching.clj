@@ -8,8 +8,7 @@
 
 (ns ^{:doc "Set operations such as union/intersection."
        :author "Rich Hickey"}
-    funjible.set-no-patching
-  (:require clojure.set))
+    funjible.set-no-patching)
 
 
 ;; The only differences from the Clojure 1.9.0 version of
@@ -22,14 +21,6 @@
 ;;
 ;; + This one has additions to the doc strings, with more details and
 ;;   examples.
-;;
-;; + When loaded or required, this one _modifies_ the definitions of
-;;   the corresponding original versions in namespace clojure.set to
-;;   become the modified versions defined in this file.  This enables
-;;   someone to require this namespace, and then everywhere in their
-;;   program that uses clojure.set will afterwards be using these
-;;   modified versions, except for any places that were compiled with
-;;   direct linking to the original Clojure 1.9.0 versions.
 
 
 (defn- bubble-max-key
@@ -317,41 +308,6 @@
   {:pre [(set? set1) (set? set2)]}
   (and (>= (count set1) (count set2))
        (every? #(contains? set1 %) set2)))
-
-
-(defn- update-one-var-val-and-meta
-  "Given a Var orig-var and another new-var, replace the value of
-  orig-var with that of new-var, using alter-var-root.  Afterwards,
-  any calls made to the function that is the value of orig-var will
-  behave the same as calls to new-var (unless they were compiled with
-  direct linking enabled, in which case they will still use the
-  original definition).
-
-  Also replace the values of metadata keys :doc :file :line
-  and :column of orig-var with the corresponding values of those keys
-  from var new-var, using alter-meta!.  Afterwards, and any uses of
-  clojure.repl/doc or clojure.repl/source on orig-var will see the new
-  definition, not the original one."
-  [orig-var new-var]
-  (alter-var-root orig-var (constantly (deref new-var)))
-  (alter-meta! orig-var merge (select-keys (meta new-var)
-                                           [:doc :file :line :column])))
-
-(defn- update-all-var-vals-and-meta
-  []
-  (update-one-var-val-and-meta #'clojure.set/union #'union)
-  (update-one-var-val-and-meta #'clojure.set/intersection #'intersection)
-  (update-one-var-val-and-meta #'clojure.set/difference #'difference)
-  (update-one-var-val-and-meta #'clojure.set/select #'select)
-  (update-one-var-val-and-meta #'clojure.set/project #'project)
-  (update-one-var-val-and-meta #'clojure.set/rename-keys #'rename-keys)
-  (update-one-var-val-and-meta #'clojure.set/rename #'rename)
-  (update-one-var-val-and-meta #'clojure.set/index #'index)
-  (update-one-var-val-and-meta #'clojure.set/map-invert #'map-invert)
-  (update-one-var-val-and-meta #'clojure.set/join #'join)
-  (update-one-var-val-and-meta #'clojure.set/subset? #'subset?)
-  (update-one-var-val-and-meta #'clojure.set/superset? #'superset?))
-
 
 (comment
 (refer 'set)
