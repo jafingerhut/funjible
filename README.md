@@ -46,22 +46,24 @@ AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:88)
 
 ## Releases and Dependency Information
 
-Latest stable release: 0.1.0
+Latest stable release: 1.0.0
 
 * [All Released Versions](https://clojars.org/funjible/versions)
 
-[Leiningen](https://github.com/technomancy/leiningen) dependency information:
+[Leiningen](https://github.com/technomancy/leiningen) /
+[Boot](http://boot-clj.com) dependency information:
 
 ```clojure
-[funjible "0.1.0"]
+[funjible "1.0.0"]
 ```
+
 [Maven](http://maven.apache.org/) dependency information:
 
 ```xml
 <dependency>
   <groupId>funjible</groupId>
   <artifactId>funjible</artifactId>
-  <version>0.1.0</version>
+  <version>1.0.0</version>
 </dependency>
 ```
 
@@ -160,7 +162,7 @@ A few performance tests show that at least some of the funjible.set
 functions are no more than 4% slower than their clojure.set
 counterparts, and usually the performance penalty is less
 percentage-wise than that.  The performance penalty in funjible.set
-0.1.0 is purely due to the extra run-time type checking of arguments
+1.0.0 is purely due to the extra run-time type checking of arguments
 using set?  and map?  See:
 
 * https://github.com/jafingerhut/funjible/blob/master/doc/performance-tests.md
