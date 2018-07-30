@@ -4,9 +4,44 @@ A Clojure library designed to be nearly identical to some core Clojure
 libraries, but with more extensive error-checking and/or
 documentation.
 
-* `funjible.set` is functionally identical to `clojure.set`, except
-  its functions throw exceptions if you give them arguments of the
-  wrong type.
+Right now this includes only the namespace `funjible.set`.  This is
+functionally identical to `clojure.set`, except its functions throw
+exceptions if you give them arguments of the wrong type.
+
+This library exists to give you the following choice:
+
+(a) use the built-in `clojure.set` functions that, if you pass them
+non-set collections, will quietly return results you may consider
+wrong.
+
+```clojure
+user=> (require '[clojure.set :as set])
+nil
+
+user=> (set/difference #{4 5} #{4 5 6})
+#{}       ; working as documented
+
+user=> (set/difference #{4 5} [4 5 6])
+#{4 5}    ; some people wish that this would throw an exception,
+          ; or return #{}, but it doesn't.
+```
+
+(b) use the `funjible.set` versions, and get an exception if you pass
+them arguments of a type that the function is not documented to
+handle, at the expense of a little extra execution time to perform the
+run-time type checks.
+
+```clojure
+user=> (require '[funjible.set :as set])
+nil
+
+user=> (set/difference #{4 5} #{4 5 6})
+#{}       ; working as documented
+
+user=> (set/difference #{4 5} [4 5 6])
+
+AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:88)
+```
 
 
 ## Releases and Dependency Information
@@ -71,7 +106,7 @@ user=> (set/difference #{4 5} #{4 5 6})
 
 
 user=> (clojure.set/difference #{4 5} [4 5 6])
-#{4 5}   ; definitely violates the principle of least surprise
+#{4 5}   ; definitely surprises and dismays some people, hence this library
 
 ;; funjible.set throws an exception instead of quietly returning the
 ;; unexpected value.
