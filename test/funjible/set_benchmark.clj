@@ -111,31 +111,48 @@
             (:name os) (:version os))))
 
 
+(defn first-consec-range-of-sorted-ints [s]
+  (if-let [begin (first s)]
+    (loop [s (rest s)
+           last-seen begin]
+      (if (seq s)
+        (if (= (inc last-seen) (first s))
+          (recur (rest s) (inc last-seen))
+          [[begin last-seen] s])
+        [[begin last-seen] nil]))))
+
+
+(defn int-coll-to-ranges [c]
+  (let [x (sort c)]
+    (loop [ranges []
+           x x]
+      (if (seq x)
+        (let [[next-range x-rest] (first-consec-range-of-sorted-ints x)]
+          (recur (conj ranges (cons 'range next-range)) x-rest))
+        ranges))))
+
+
+(defn summarize-args [args]
+  (map int-coll-to-ranges args))
+
+
 (defmacro benchmark
   [desc-map bindings expr & opts]
   `(do
      (iprintf *err* "Benchmarking %s %s %s" ~desc-map '~bindings '~expr)
-     ;(criterium/quick-bench ~expr ~@opts)
-     ;(criterium/bench ~expr ~@opts)
      (let ~bindings
        (let [results#
-;;             (criterium/with-progress-reporting
                (criterium/benchmark ~expr
                                     (merge {:samples *sample-count*
                                             :warmup-jit-period *warmup-jit-period*
                                             :target-execution-time *target-execution-time*}
-                                           (hash-map ~@opts)))
-;;               (criterium/quick-benchmark ~expr ~@opts)
-;;               )
-             ]
+                                           (hash-map ~@opts)))]
          (pp/pprint {:bindings '~bindings
                      :description ~desc-map
                      :expr '~expr
                      :opts '~opts
                      :results results#})
-         (iprintf *err* " %s\n" (time-with-scale (first (:mean results#))))
-;;         (iprintf *err* "    %s\n" (platform-desc results#))
-         ))
+         (iprintf *err* " %s\n" (time-with-scale (first (:mean results#))))))
      (flush)))
 
 
@@ -246,7 +263,7 @@
 (def union-results-table-form [
   [ "2nd arg &rarr;" "#{}"   "#{0..2}"      "#{0..3}"      "#{0..19}"      "#{0..99}"       "#{0..999}"       "#{1000..1002}"      "#{1000..1003}"      "#{1000..1019}"      "#{1000.1099}"       "#{1000..1999}" ]
   [ "&darr; 1st arg &darr;" ]
-  [ "#{}"            [[] []] ]
+  [ "#{}"            [#{} #{}] ]
   [ "#{0..2}"        nil     [r0-3    r0-3] nil            nil             nil              nil               [r0-3    r1000-1003] ]
   [ "#{0..3}"        nil     [r0-4    r0-3] [r0-4    r0-4] nil             nil              nil               [r0-4    r1000-1003] [r0-4    r1000-1004] ]
   [ "#{0..19}"       nil     [r0-20   r0-3] [r0-20   r0-4] [r0-20   r0-20] nil              nil               [r0-20   r1000-1003] [r0-20   r1000-1004] [r0-20   r1000-1020] ]
@@ -269,7 +286,7 @@
 (def short-union-results-table-form [
   [ "2nd arg &rarr;" "#{}"   "#{0..2}"      "#{0..999}"       "#{1000..1002}"      "#{1000..1999}" ]
   [ "&darr; 1st arg &darr;" ]
-  [ "#{}"            [[] []] ]
+  [ "#{}"            [#{} #{}] ]
   [ "#{0..2}"        nil     [r0-3    r0-3] nil               [r0-3    r1000-1003] ]
   [ "#{0..999}"      nil     [r0-1000 r0-3] [r0-1000 r0-1000] [r0-1000 r1000-1003] [r0-1000 r1000-2000] ]
   ])
@@ -326,7 +343,7 @@
 
 (def intersection-results-table-form [
   [ nil         "#{}"   "#{0..1}"      "#{0..2}"      "#{0..3}"      "#{0..19}"      "#{0..99}"       "#{0..999}"       "#{1000..1001}"      "#{1000..1002}"      "#{1000..1003}"      "#{1000..1019}"      "#{1000.1099}"       "#{1000..1999}" ]
-  [ "#{}"       [[] []] ]
+  [ "#{}"       [#{} #{}] ]
   [ "#{0..1}"   nil     [r0-2    r0-2] [r0-2    r0-3] [r0-2    r0-4] [r0-2    r0-20] [r0-2    r0-100] [r0-2    r0-1000] [r0-2    r1000-1002] [r0-2    r1000-1003] [r0-2    r1000-1004] [r0-2    r1000-1020] [r0-2    r1000-1100] [r0-2    r1000-2000] ]
   [ "#{0..2}"   nil     nil            [r0-3    r0-3] [r0-3    r0-4] [r0-3    r0-20] [r0-3    r0-100] [r0-3    r0-1000] nil                  [r0-3    r1000-1003] [r0-3    r1000-1004] [r0-3    r1000-1020] [r0-3    r1000-1100] [r0-3    r1000-2000] ]
   [ "#{0..3}"   nil     nil            nil            [r0-4    r0-4] [r0-4    r0-20] [r0-4    r0-100] [r0-4    r0-1000] nil                  nil                  [r0-4    r1000-1004] [r0-4    r1000-1020] [r0-4    r1000-1100] [r0-4    r1000-2000] ]
@@ -397,7 +414,7 @@
   ])
 
 ;; TBD: Add these arg pairs to table above?
-;; [[] []]
+;; [#{} #{}]
 ;; 1st is a lot larger, disjoint          [(range 0 3000) (range 4000 5000)]
 ;; 1st is a lot larger, superset of 2nd   [(range 0 3000) (range 0 1000)]
 
@@ -440,31 +457,6 @@
   (with-open [rdr (java.io.PushbackReader. (io/reader fname))]
     (doall (take-while #(not= % :eof)
                        (repeatedly #(edn/read {:eof :eof} rdr))))))
-
-
-(defn first-consec-range-of-sorted-ints [s]
-  (if-let [begin (first s)]
-    (loop [s (rest s)
-           last-seen begin]
-      (if (seq s)
-        (if (= (inc last-seen) (first s))
-          (recur (rest s) (inc last-seen))
-          [[begin last-seen] s])
-        [[begin last-seen] nil]))))
-
-
-(defn int-coll-to-ranges [c]
-  (let [x (sort c)]
-    (loop [ranges []
-           x x]
-      (if (seq x)
-        (let [[next-range x-rest] (first-consec-range-of-sorted-ints x)]
-          (recur (conj ranges (cons 'range next-range)) x-rest))
-        ranges))))
-
-
-(defn summarize-args [args]
-  (map int-coll-to-ranges args))
 
 
 (defn map-with-keys? [x ks]
@@ -577,11 +569,11 @@ and col.  Row and col numbers begin at 0."
 
 (defn time-to-html [t]
   (if t
-    (format "%,.0f" (* t s-to-ns))
+    (format "%,.0f ns" (* t s-to-ns))
     "--"))
 
 
-(defn time-change-html [t1 t2]
+(defn percent-change-html [t1 t2]
   (if (and t1 t2)
     (let [pct (* 100.0 (/ (- t2 t1) t1))]
       (format "<strong><mark>%.1f%%</mark></strong>" pct))
@@ -602,7 +594,7 @@ and col.  Row and col numbers begin at 0."
                              (cons (time-to-html first-time)
                                    (mapcat (fn [t]
                                              [(time-to-html t)
-                                              (time-change-html first-time t)])
+                                              (percent-change-html first-time t)])
                                            other-times)))
                            ;; else
                            [])))]
