@@ -1,14 +1,15 @@
 (ns funjible.set-test
   (:require [clojure.test :refer :all]
+            [clojure.set :as cset]
+            [clojure.pprint :as pp]
             [funjible.set :as fset]
             [funjible.set-clj190-precondition-mods-only :as fset-pre-only]
             [funjible.set-precondition-always-transient-mods :as fset-trans]
-            [clojure.set :as cset]
             [clojure.data.avl :as avl]
             [clojure.data.int-map :as imap]
             [clojure.data.priority-map :as pm]
-            [flatland.useful.deftype :as useful]
-            [clojure.pprint :as pp]))
+            ;;[flatland.useful.deftype :as useful]
+            ))
 
 
 ;; Many other types besides numbers, strings, and keywords have values
@@ -121,6 +122,8 @@
       (doseq [s1 sets, s2 sets]
         (let [msg (format "(type s1)=%s (type s2)=%s" (type s1) (type s2))]
           (is (= s1 s2) msg)
+          (is (cset/subset? s1 s2) msg)
+          (is (cset/subset? s2 s1) msg)
           (is (= (hash s1) (hash s2)) msg))))))
 
 
