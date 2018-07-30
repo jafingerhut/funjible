@@ -33,7 +33,35 @@ Latest stable release: 0.1.0
 
 ## Usage
 
-An example 
+There are two primary ways to use the modified versions of
+`clojure.set` functions in this library.
+
+One is to modify as many of your Clojure namespaces as you wish that
+currently require `clojure.set`, so that they instead require
+`funjible.set`.  This gives you per-namespace control over which of
+your code uses the new versions, vs. the originals, but requires
+changing as many require clauses as you want to use the versions in
+`funjible.set`.
+
+The other is to pick at least one namespace anywhere in your code, and
+require the namespace `funjible.set-with-patching`.  Requiring that
+namespace not only loads the namespace `funjible.set`, it also
+_modifies_ the functions in `clojure.set` to be the same as the
+corresponding ones in `funjible.set`.  After requiring the
+`funjible.set-with-patching` namespace, any call you make to
+`clojure.set/union` will behave the same as a call to
+`funjible.set/union`, with the extra argument type checking.  The only
+exceptions to this are any calls to `clojure.set/union` that were
+compiled with the Clojure compiler's [direct linking
+option](https://clojure.org/reference/compilation#_compiler_options),
+compiled before the `funjible.set-with-patching` namespace was
+required.  Such calls will still call the original versions in
+`clojure.set`.
+
+
+An example in a project where you have _not_ required the namespace
+`funjible.set-with-patching` anywhere:
+
 ```clojure
 user=> (require '[funjible.set :as set])
 nil
@@ -49,7 +77,7 @@ user=> (clojure.set/difference #{4 5} [4 5 6])
 ;; unexpected value.
 user=> (set/difference #{4 5} [4 5 6])
 
-AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:60)
+AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:88)
 
 user=> (doc set/difference)
 -------------------------
@@ -67,18 +95,28 @@ funjible.set/difference
 nil
 ```
 
-Other Clojure set implementations:
+And here is the different behavior you get if _anywhere_ in your
+project you have required `funjible.set-with-patching`.
 
-* Zach Tellman's [immutable
-  bitsets](https://github.com/clojure/data.int-map) use less
-  memory when you only want sets of integers, especially if those
-  integers have values close together.
+```clojure
+;; This is done in some namespace in your project, _not_ the one where
+;; the other expressions below are evaluated:
 
-* Michał Marczyk's [sorted sets and maps using AVL
-  trees](https://github.com/clojure/data.avl) can efficiently
-  find the rank of elements/keys, and they have transient
-  implementations for them, unlike `clojure.core`'s sorted sets and
-  maps.
+(require 'funjible.set-with-patching)
+
+
+;; The interaction below is in some namespace that never mentioned
+;; `funjible.set` nor `funjible.set-with-patching`:
+
+user=> (require 'clojure.set)
+nil
+
+user=> (clojure.set/difference #{4 5} [4 5 6])
+
+AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:88)
+
+
+```
 
 
 ## Performance notes
@@ -103,6 +141,27 @@ clarity.
 
 If transients are used, remember to preserve metadata in the return
 values, in the same way that clojure.set does.
+
+
+## Other Clojure set implementations
+
+You can use `funjible.set` without using these other implementations
+of sets, but note that the modified set operation functions in
+`funjible.set` will work given instances of these other set types,
+too, and any others not listed here, as long as those sets implement
+normal Clojure primitive operations on sets such as `conj`, `disj`,
+and `seq`.
+
+* Zach Tellman's [immutable
+  bitsets](https://github.com/clojure/data.int-map) use less
+  memory when you only want sets of integers, especially if those
+  integers have values close together.
+
+* Michał Marczyk's [sorted sets and maps using AVL
+  trees](https://github.com/clojure/data.avl) can efficiently
+  find the rank of elements/keys, and they have transient
+  implementations for them, unlike `clojure.core`'s sorted sets and
+  maps.
 
 
 ## Running benchmarks
