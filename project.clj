@@ -3,7 +3,7 @@
   :url "http://github.com/jafingerhut/funjible"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :dependencies []
+  :dependencies [[org.clojure/clojure "1.6.0"]]
   :profiles {:dev {:dependencies [[org.clojure/data.avl "0.0.17"]
                                   [org.clojure/data.int-map "0.2.4"]
                                   [org.clojure/data.priority-map "0.0.10"]]}
