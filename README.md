@@ -44,23 +44,24 @@ AssertionError Assert failed: (set? s2)  funjible.set/difference (set.clj:88)
 ```
 
 
-# Wait, isn't this what clojure.spec is for?
+## Wait, isn't this what clojure.spec is for?
 
 You most definitely can write simple specs for most or all of the
 functions in the `clojure.set` namespace that, when instrumentation is
 enabled, throw exceptions when they are passed arguments of
-unsupported types, just as the modified versions in namespace
-`funjible.set` do.
+unsupported types, just as the modified versions in `funjible.set` do.
 
-However, the extra run time of the `funjible.set` versions is much
-lower than the speced versions (see below), so you may be more willing
-to use the `funjible.set` versions in production use, and/or in more
-time consuming test runs.
+However, starting from the original versions in `clojure.set`, the
+extra run time of the `funjible.set` versions is much smaller than for
+the speced versions (see below).  Thus you may be willing to use the
+`funjible.set` versions in long test runs, or even in production
+deployments.
 
-The table below give measurements of elapsed time, obtained using the
-[`criterium`](https://github.com/hugoduncan/criterium) library on a
-2015 MacBook Pro running OSX 10.12.6, JDK 1.8.0_181, and Clojure
-1.9.0.  The specs used in these measurements can be found
+The table below gives run times as elapsed wall clock time, measured
+using the [`criterium`](https://github.com/hugoduncan/criterium)
+library on a 2015 MacBook Pro running OSX 10.12.6, Oracle JDK
+1.8.0_181, and Clojure 1.9.0.  The specs used in these measurements
+can be found
 [here](https://github.com/jafingerhut/funjible-test-project/blob/master/src/funjible_test_project/set_speced.clj).
 
 ```clojure
@@ -70,15 +71,15 @@ The table below give measurements of elapsed time, obtained using the
 (def s1000-1999 (set (range 1000 2000)))
 ```
 
-| Expression | `clojure.set/union` | `funjible.set/union` | `clojure.set/union` with spec instrumentation enabled |
+| Expression | `clojure.set` | `funjible.set` | `clojure.set` with spec instrumentation enabled |
 | ---------- | ------------------- | -------------------- | ----------------------------------------------------- |
-| `(union #{} #{})` | 53 nsec | 126 nsec | 8,786 nsec |
-| `(union #{0 1 2} #{0 1 2})` | 271 nsec | 277 nsec | 9,524 nsec |
-| `(union #{0 1 2} #{1000 1001 1002})` | 502 nsec | 516 nsec | 9,307 nsec |
-| `(union s0-999 #{0 1 2})` | 287 nsec | 305 nsec | 9,386 nsec |
-| `(union s0-999 s0-999)` | 85,277 nsec | 81,324 nsec | 95,772 nsec |
-| `(union s0-999 #{1000 1001 1002})` | 776 nsec | 796 nsec | 9,633 nsec |
-| `(union s0-999 s1000-1999)` | 244,420 nsec | 228,622 nsec | 260,550 nsec |
+| `(union #{} #{})`                    | 54 nsec | 132 nsec | 8,768 nsec |
+| `(union #{0 1 2} #{0 1 2})`          | 263 nsec | 280 nsec | 9,182 nsec |
+| `(union #{0 1 2} #{1000 1001 1002})` | 498 nsec | 532 nsec | 9,330 nsec |
+| `(union s0-999 #{0 1 2})`            | 285 nsec | 308 nsec | 9,107 nsec |
+| `(union s0-999 s0-999)`              | 84,188 nsec | 86,447 nsec | 93,693 nsec |
+| `(union s0-999 #{1000 1001 1002})`   | 769 nsec | 793 nsec | 9,589 nsec |
+| `(union s0-999 s1000-1999)`          | 226,786 nsec | 225,932 nsec | 250,610 nsec |
 
 
 ## Releases and Dependency Information
