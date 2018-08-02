@@ -26,6 +26,15 @@ user=> (set/difference #{4 5} [4 5 6])
           ; or return #{}, but it doesn't.
 ```
 
+[ClojureDocs.org](http://clojuredocs.org) contains other examples of
+undesirable return values when you give non-set arguments to other
+function in `clojure.set` here:
+[union](http://clojuredocs.org/clojure.set/union)
+[intersection](http://clojuredocs.org/clojure.set/intersection)
+[difference](http://clojuredocs.org/clojure.set/difference)
+[subset?](http://clojuredocs.org/clojure.set/subset_q)
+[superset?](http://clojuredocs.org/clojure.set/superset_q)
+
 (b) use the `funjible.set` versions, and get an exception if you pass
 them arguments of a type that the function is not documented to
 handle, at the expense of a little extra execution time to perform the
